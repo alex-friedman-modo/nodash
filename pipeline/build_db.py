@@ -19,14 +19,14 @@ ROOT = Path(__file__).parent.parent
 DB_PATH = ROOT / 'data' / 'restaurants.db'
 ZIP_CSV = ROOT / 'data' / 'nyc-zip-codes.csv'
 
-SEARCH_QUERY_TEMPLATES = [
-    "restaurants with delivery {zip}",
-    "pizza delivery {zip}",
-    "chinese takeout delivery {zip}",
-    "thai delivery {zip}",
-    "indian delivery {zip}",
-    "mexican takeout {zip}",
-    "japanese delivery {zip}",
+SEARCH_QUERIES = [
+    "restaurants with delivery",
+    "pizza delivery",
+    "chinese takeout delivery",
+    "thai delivery",
+    "indian delivery",
+    "mexican takeout",
+    "japanese delivery",
 ]
 
 DETAIL_FIELDS = ",".join([
@@ -92,12 +92,35 @@ def init_db(conn):
 
 # ── Google APIs ───────────────────────────────────────────────────────────────
 
-def places_text_search(query: str) -> list:
-    """Text search using zip code embedded in query for natural geographic scoping."""
+def geocode_zip(zipcode: str) -> dict | None:
+    """Return viewport bounding box for a zip code via Geocoding API."""
+    url = (
+        f"https://maps.googleapis.com/maps/api/geocode/json"
+        f"?address={zipcode}&components=country:US|postal_code:{zipcode}"
+        f"&key={API_KEY}"
+    )
+    with urllib.request.urlopen(urllib.request.Request(url), timeout=10) as r:
+        data = json.loads(r.read())
+    results = data.get("results", [])
+    if not results:
+        return None
+    return results[0].get("geometry", {}).get("viewport")
+    # {"northeast": {"lat": .., "lng": ..}, "southwest": {"lat": .., "lng": ..}}
+
+
+def places_text_search(query: str, viewport: dict) -> list:
+    """Text search hard-restricted to exact zip code bounding box."""
     url = "https://places.googleapis.com/v1/places:searchText"
+    ne, sw = viewport["northeast"], viewport["southwest"]
     body = json.dumps({
         "textQuery": query,
         "maxResultCount": 20,
+        "locationRestriction": {
+            "rectangle": {
+                "low":  {"latitude": sw["lat"], "longitude": sw["lng"]},
+                "high": {"latitude": ne["lat"], "longitude": ne["lng"]},
+            }
+        }
     }).encode()
     req = urllib.request.Request(url, data=body, method="POST", headers={
         "Content-Type": "application/json",
@@ -199,12 +222,23 @@ def run(zip_filter: list[str] | None = None, dry_run: bool = False):
 
         print(f"\n📍 {zipcode} — {neighborhood}, {borough}")
 
-        # Search each query with zip code embedded for natural geographic scoping
+        # Geocode zip → exact bounding box
+        try:
+            viewport = geocode_zip(zipcode)
+            total_api_calls += 1
+            if not viewport:
+                print(f"  ⚠️  Could not geocode {zipcode}, skipping")
+                continue
+            time.sleep(0.1)
+        except Exception as e:
+            print(f"  ⚠️  Geocode error: {e}")
+            continue
+
+        # Search within exact zip bounds
         candidate_ids: set[str] = set()
-        for template in SEARCH_QUERY_TEMPLATES:
-            query = template.format(zip=zipcode)
+        for query in SEARCH_QUERIES:
             try:
-                results = places_text_search(query)
+                results = places_text_search(query, viewport)
                 total_api_calls += 1
                 for r in results:
                     if r.get("businessStatus") == "OPERATIONAL" and r.get("delivery"):
