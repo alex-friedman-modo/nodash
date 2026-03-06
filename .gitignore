@@ -1,7 +1,7 @@
-# Data (don't commit the database)
-data/
+# Data (don't commit the database or exports)
+data/restaurants.db
+data/restaurants_export.csv
 *.db
-*.csv
 
 # Environment
 .env

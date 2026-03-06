@@ -1,67 +1,35 @@
 #!/usr/bin/env python3
 """
 nodash - NYC free delivery restaurant database builder
-Pulls restaurants from Google Places API, filters for direct delivery candidates,
-stores in SQLite for verification pipeline.
+
+Strategy:
+  1. Load all 177 NYC zip codes (with borough + neighborhood labels)
+  2. Geocode each zip → get exact bounding box from Google Geocoding API
+  3. Use bounding box as locationRestriction in Places Text Search
+  4. Filter delivery:true candidates, pull full Place Details
+  5. Store in SQLite, deduplicating by place_id
 """
 
-import os, json, time, sqlite3, urllib.request, urllib.error, ssl
-from datetime import datetime
+import os, json, time, sqlite3, urllib.request, urllib.error, csv
+from datetime import datetime, timezone
+from pathlib import Path
 
 API_KEY = os.environ.get('GOOGLE_PLACES_API_KEY')
-DB_PATH = os.path.join(os.path.dirname(__file__), '..', 'data', 'restaurants.db')
+ROOT = Path(__file__).parent.parent
+DB_PATH = ROOT / 'data' / 'restaurants.db'
+ZIP_CSV = ROOT / 'data' / 'nyc-zip-codes.csv'
 
-# NYC neighborhoods with center coordinates
-# (name, lat, lng, radius_m)
-NYC_NEIGHBORHOODS = [
-    # Brooklyn
-    ("Park Slope",          40.6728, -73.9772, 1200),
-    ("Williamsburg",        40.7081, -73.9571, 1200),
-    ("DUMBO/Brooklyn Hts",  40.6981, -73.9887, 1000),
-    ("Cobble Hill/Carroll", 40.6855, -73.9937, 1000),
-    ("Prospect Heights",    40.6770, -73.9658, 1000),
-    ("Crown Heights",       40.6694, -73.9442, 1200),
-    ("Bed-Stuy",            40.6872, -73.9418, 1400),
-    ("Fort Greene",         40.6899, -73.9748, 1000),
-    ("Sunset Park",         40.6457, -74.0036, 1200),
-    ("Bay Ridge",           40.6351, -74.0208, 1200),
-    ("Flatbush",            40.6501, -73.9496, 1200),
-    ("Bushwick",            40.6942, -73.9213, 1200),
-    ("Greenpoint",          40.7290, -73.9540, 1000),
-    ("Borough Park",        40.6251, -73.9980, 1200),
-    ("Sheepshead Bay",      40.5923, -73.9438, 1200),
-    # Manhattan
-    ("Astoria",             40.7721, -73.9301, 1300),  # Queens but close
-    ("Upper West Side",     40.7870, -73.9754, 1200),
-    ("Upper East Side",     40.7736, -73.9566, 1200),
-    ("Midtown West",        40.7549, -73.9840, 1200),
-    ("Midtown East",        40.7549, -73.9680, 1200),
-    ("Chelsea",             40.7465, -74.0014, 1000),
-    ("Hell's Kitchen",      40.7638, -73.9918, 1000),
-    ("East Village",        40.7265, -73.9815, 1000),
-    ("West Village",        40.7338, -74.0059, 900),
-    ("Lower East Side",     40.7157, -73.9863, 1000),
-    ("Chinatown",           40.7158, -73.9970, 800),
-    ("Harlem",              40.8116, -73.9465, 1400),
-    ("Washington Heights",  40.8448, -73.9393, 1400),
-    ("Inwood",              40.8676, -73.9218, 1000),
-    ("Flushing",            40.7675, -73.8330, 1400),  # Queens
-    ("Jackson Heights",     40.7557, -73.8831, 1200),  # Queens
-    ("Sunnyside",           40.7437, -73.9196, 1000),  # Queens
-    ("Forest Hills",        40.7196, -73.8449, 1200),  # Queens
-    ("Jamaica",             40.7024, -73.7878, 1400),  # Queens
-    ("Bronx",               40.8448, -73.8648, 1600),
-    ("Staten Island",       40.5795, -74.1502, 1800),
+SEARCH_QUERY_TEMPLATES = [
+    "restaurants with delivery {zip}",
+    "pizza delivery {zip}",
+    "chinese takeout delivery {zip}",
+    "thai delivery {zip}",
+    "indian delivery {zip}",
+    "mexican takeout {zip}",
+    "japanese delivery {zip}",
 ]
 
-SEARCH_QUERIES = [
-    "restaurants delivery",
-    "pizza chinese thai delivery",
-    "indian mexican delivery food",
-    "takeout food delivery restaurant",
-]
-
-FIELDS = ",".join([
+DETAIL_FIELDS = ",".join([
     "id", "displayName", "formattedAddress", "shortFormattedAddress",
     "nationalPhoneNumber", "websiteUri", "location", "rating",
     "userRatingCount", "priceLevel", "priceRange", "primaryType", "types",
@@ -72,191 +40,220 @@ FIELDS = ",".join([
     "servesLunch", "servesDinner"
 ])
 
+
+# ── Database ──────────────────────────────────────────────────────────────────
+
 def init_db(conn):
     conn.execute("""
     CREATE TABLE IF NOT EXISTS restaurants (
-        place_id TEXT PRIMARY KEY,
-        name TEXT,
-        address TEXT,
-        short_address TEXT,
-        neighborhood TEXT,
-        phone TEXT,
-        website TEXT,
-        lat REAL,
-        lng REAL,
-        rating REAL,
-        review_count INTEGER,
-        price_level TEXT,
-        price_low INTEGER,
-        price_high INTEGER,
-        primary_type TEXT,
-        delivery INTEGER,
-        takeout INTEGER,
-        dine_in INTEGER,
-        delivery_hours TEXT,
-        payment_cash_only INTEGER,
-        editorial_summary TEXT,
-        serves_vegetarian INTEGER,
-        business_status TEXT,
+        place_id            TEXT PRIMARY KEY,
+        name                TEXT,
+        address             TEXT,
+        short_address       TEXT,
+        zip_code            TEXT,
+        neighborhood        TEXT,
+        borough             TEXT,
+        phone               TEXT,
+        website             TEXT,
+        lat                 REAL,
+        lng                 REAL,
+        rating              REAL,
+        review_count        INTEGER,
+        price_level         TEXT,
+        price_low           INTEGER,
+        price_high          INTEGER,
+        primary_type        TEXT,
+        delivery            INTEGER,
+        takeout             INTEGER,
+        dine_in             INTEGER,
+        delivery_hours      TEXT,
+        payment_cash_only   INTEGER,
+        editorial_summary   TEXT,
+        serves_vegetarian   INTEGER,
+        business_status     TEXT,
         -- Verification fields (filled by calling pipeline)
-        verified INTEGER DEFAULT 0,
-        direct_delivery INTEGER,
-        delivery_fee TEXT,
-        delivery_minimum TEXT,
-        delivery_radius TEXT,
-        ordering_method TEXT,
-        verification_notes TEXT,
-        last_verified TEXT,
-        last_updated TEXT
+        verified            INTEGER DEFAULT 0,
+        direct_delivery     INTEGER,
+        delivery_fee        TEXT,
+        delivery_minimum    TEXT,
+        delivery_radius     TEXT,
+        ordering_method     TEXT,
+        verification_notes  TEXT,
+        last_verified       TEXT,
+        last_updated        TEXT
     )
     """)
-    conn.execute("CREATE INDEX IF NOT EXISTS idx_neighborhood ON restaurants(neighborhood)")
-    conn.execute("CREATE INDEX IF NOT EXISTS idx_delivery ON restaurants(delivery)")
-    conn.execute("CREATE INDEX IF NOT EXISTS idx_verified ON restaurants(verified)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_zip        ON restaurants(zip_code)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_borough    ON restaurants(borough)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_delivery   ON restaurants(delivery)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_verified   ON restaurants(verified)")
     conn.commit()
 
-def places_text_search(query, lat, lng, radius_m):
+
+# ── Google APIs ───────────────────────────────────────────────────────────────
+
+def places_text_search(query: str) -> list:
+    """Text search using zip code embedded in query for natural geographic scoping."""
     url = "https://places.googleapis.com/v1/places:searchText"
     body = json.dumps({
         "textQuery": query,
         "maxResultCount": 20,
-        "locationBias": {
-            "circle": {
-                "center": {"latitude": lat, "longitude": lng},
-                "radius": float(radius_m)
-            }
-        }
     }).encode()
     req = urllib.request.Request(url, data=body, method="POST", headers={
         "Content-Type": "application/json",
         "X-Goog-Api-Key": API_KEY,
-        "X-Goog-FieldMask": f"places.id,places.delivery,places.businessStatus,places.userRatingCount"
+        "X-Goog-FieldMask": "places.id,places.delivery,places.businessStatus",
     })
     with urllib.request.urlopen(req, timeout=10) as r:
         return json.loads(r.read()).get("places", [])
 
-def places_details(place_id):
+
+def place_details(place_id: str) -> dict:
+    """Fetch full details for a single place."""
     url = f"https://places.googleapis.com/v1/places/{place_id}"
     req = urllib.request.Request(url, headers={
         "X-Goog-Api-Key": API_KEY,
-        "X-Goog-FieldMask": FIELDS
+        "X-Goog-FieldMask": DETAIL_FIELDS,
     })
     with urllib.request.urlopen(req, timeout=10) as r:
         return json.loads(r.read())
 
-def extract_delivery_hours(data):
+
+# ── Helpers ───────────────────────────────────────────────────────────────────
+
+def extract_delivery_hours(data: dict) -> str | None:
     for h in data.get("regularSecondaryOpeningHours", []):
         if h.get("secondaryHoursType") == "DELIVERY":
             return json.dumps(h.get("weekdayDescriptions", []))
     return None
 
-def upsert_restaurant(conn, place, neighborhood):
-    loc = place.get("location", {})
-    pr = place.get("priceRange", {})
-    po = place.get("paymentOptions", {})
-    es = place.get("editorialSummary", {})
 
+def upsert_restaurant(conn, place: dict, zip_code: str, neighborhood: str, borough: str):
+    loc = place.get("location", {})
+    pr  = place.get("priceRange", {})
+    po  = place.get("paymentOptions", {})
+    es  = place.get("editorialSummary", {})
     conn.execute("""
     INSERT OR REPLACE INTO restaurants (
-        place_id, name, address, short_address, neighborhood,
-        phone, website, lat, lng, rating, review_count,
-        price_level, price_low, price_high, primary_type,
-        delivery, takeout, dine_in, delivery_hours,
-        payment_cash_only, editorial_summary, serves_vegetarian,
-        business_status, last_updated
-    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+        place_id, name, address, short_address,
+        zip_code, neighborhood, borough,
+        phone, website, lat, lng,
+        rating, review_count, price_level, price_low, price_high,
+        primary_type, delivery, takeout, dine_in,
+        delivery_hours, payment_cash_only, editorial_summary,
+        serves_vegetarian, business_status, last_updated
+    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
     """, (
         place.get("id"),
         place.get("displayName", {}).get("text"),
         place.get("formattedAddress"),
         place.get("shortFormattedAddress"),
-        neighborhood,
+        zip_code, neighborhood, borough,
         place.get("nationalPhoneNumber"),
         place.get("websiteUri"),
-        loc.get("latitude"),
-        loc.get("longitude"),
+        loc.get("latitude"), loc.get("longitude"),
         place.get("rating"),
         place.get("userRatingCount"),
         place.get("priceLevel"),
         pr.get("startPrice", {}).get("units"),
         pr.get("endPrice", {}).get("units"),
         place.get("primaryType"),
-        1 if place.get("delivery") else 0,
-        1 if place.get("takeout") else 0,
-        1 if place.get("dineIn") else 0,
+        1 if place.get("delivery")  else 0,
+        1 if place.get("takeout")   else 0,
+        1 if place.get("dineIn")    else 0,
         extract_delivery_hours(place),
         1 if po.get("acceptsCashOnly") else 0,
         es.get("text"),
         1 if place.get("servesVegetarianFood") else 0,
         place.get("businessStatus"),
-        datetime.utcnow().isoformat()
+        datetime.now(timezone.utc).isoformat(),
     ))
 
-def run(neighborhoods=None, dry_run=False):
+
+# ── Main ──────────────────────────────────────────────────────────────────────
+
+def load_zip_codes(path: Path) -> list[dict]:
+    with open(path) as f:
+        return list(csv.DictReader(f))
+
+
+def run(zip_filter: list[str] | None = None, dry_run: bool = False):
+    if not API_KEY:
+        raise RuntimeError("GOOGLE_PLACES_API_KEY not set")
+
+    DB_PATH.parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(DB_PATH)
     init_db(conn)
 
-    targets = neighborhoods or NYC_NEIGHBORHOODS
-    total_found = 0
+    zip_codes = load_zip_codes(ZIP_CSV)
+    if zip_filter:
+        zip_codes = [z for z in zip_codes if z["ZipCode"] in zip_filter]
+
     total_new = 0
-    api_calls = 0
+    total_api_calls = 0
 
-    for (name, lat, lng, radius) in targets:
-        print(f"\n📍 {name}...")
-        neighborhood_ids = set()
+    for row in zip_codes:
+        zipcode     = row["ZipCode"].strip()
+        neighborhood = row["Neighborhood"].strip()
+        borough     = row["Borough"].strip()
 
-        for query in SEARCH_QUERIES:
+        print(f"\n📍 {zipcode} — {neighborhood}, {borough}")
+
+        # Search each query with zip code embedded for natural geographic scoping
+        candidate_ids: set[str] = set()
+        for template in SEARCH_QUERY_TEMPLATES:
+            query = template.format(zip=zipcode)
             try:
-                results = places_text_search(query, lat, lng, radius)
-                api_calls += 1
+                results = places_text_search(query)
+                total_api_calls += 1
                 for r in results:
-                    if (r.get("businessStatus") == "OPERATIONAL" and
-                        r.get("delivery") == True):
-                        neighborhood_ids.add(r["id"])
-                time.sleep(0.2)
+                    if r.get("businessStatus") == "OPERATIONAL" and r.get("delivery"):
+                        candidate_ids.add(r["id"])
+                time.sleep(0.15)
             except Exception as e:
-                print(f"  ⚠️  Search error: {e}")
+                print(f"  ⚠️  Search error ({query}): {e}")
 
-        print(f"  {len(neighborhood_ids)} delivery candidates found")
+        print(f"  {len(candidate_ids)} delivery candidates")
 
-        for place_id in neighborhood_ids:
-            # Check if already in DB
+        # Step 3: fetch details for new candidates only
+        zip_new = 0
+        for place_id in candidate_ids:
             existing = conn.execute(
                 "SELECT place_id FROM restaurants WHERE place_id=?", (place_id,)
             ).fetchone()
             if existing:
                 continue
-
             try:
-                detail = places_details(place_id)
-                api_calls += 1
+                detail = place_details(place_id)
+                total_api_calls += 1
                 if not dry_run:
-                    upsert_restaurant(conn, detail, name)
+                    upsert_restaurant(conn, detail, zipcode, neighborhood, borough)
                     conn.commit()
+                zip_new += 1
                 total_new += 1
-                total_found += 1
-                print(f"  + {detail.get('displayName',{}).get('text','?')} ({detail.get('priceLevel','?')})")
+                name = detail.get("displayName", {}).get("text", "?")
+                print(f"  + {name}")
                 time.sleep(0.15)
             except Exception as e:
-                print(f"  ⚠️  Detail error for {place_id}: {e}")
+                print(f"  ⚠️  Detail error {place_id}: {e}")
+
+        print(f"  → {zip_new} new added")
 
     conn.close()
-    print(f"\n✅ Done. {total_new} new restaurants added. ~{api_calls} API calls made.")
+    print(f"\n✅ Done. {total_new} new restaurants | ~{total_api_calls} API calls")
+
 
 if __name__ == "__main__":
     import sys
-    if not API_KEY:
-        print("❌ GOOGLE_PLACES_API_KEY not set")
-        sys.exit(1)
+    dry_run    = "--dry-run" in sys.argv
+    zip_filter = None
 
-    # Default: just Park Slope to test
-    test_mode = "--all" not in sys.argv
-    neighborhoods = None if "--all" in sys.argv else [n for n in NYC_NEIGHBORHOODS if "Park Slope" in n[0]]
-    dry_run = "--dry-run" in sys.argv
+    # Allow passing specific zips: python build_db.py 11215 11217
+    explicit_zips = [a for a in sys.argv[1:] if a.isdigit() and len(a) == 5]
+    if explicit_zips:
+        zip_filter = explicit_zips
 
-    print(f"🍕 nodash database builder")
-    print(f"   Mode: {'ALL NYC' if not test_mode else 'Park Slope only'}")
-    print(f"   Dry run: {dry_run}")
-    print(f"   DB: {DB_PATH}\n")
+    mode = f"zips: {zip_filter}" if zip_filter else "ALL 177 NYC zip codes"
+    print(f"🍕 nodash — {mode} | dry_run={dry_run}\n")
 
-    run(neighborhoods=neighborhoods, dry_run=dry_run)
+    run(zip_filter=zip_filter, dry_run=dry_run)
