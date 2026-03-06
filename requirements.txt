@@ -1,0 +1,7 @@
+# No third-party deps for pipeline (uses stdlib only)
+# Uncomment when adding web frontend or ElevenLabs integration:
+
+# elevenlabs
+# twilio
+# flask or fastapi
+# requests

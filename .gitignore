@@ -1,0 +1,24 @@
+# Data (don't commit the database)
+data/
+*.db
+*.csv
+
+# Environment
+.env
+.env.*
+*.env
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+*.egg-info/
+
+# Node (for web frontend later)
+node_modules/
+.next/
+
+# OS
+.DS_Store
