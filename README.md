@@ -26,17 +26,20 @@ nodash/
 └── README.md
 ```
 
+## Stack
+
+- **Pipeline**: Python (managed with [uv](https://docs.astral.sh/uv/)) — data collection, verification calls
+- **Web**: TypeScript (Next.js) — frontend, planned migration from Python
+
 ## Setup
 
 ```bash
-# Install dependencies
-pip install -r requirements.txt
+# Install dependencies (uses uv)
+uv sync
+uv sync --extra calling   # include ElevenLabs + Twilio deps
 
-# Set env vars
-export GOOGLE_PLACES_API_KEY=your_key
-export ELEVENLABS_API_KEY=your_key
-export TWILIO_ACCOUNT_SID=your_sid
-export TWILIO_AUTH_TOKEN=your_token
+# Copy env file and fill in keys
+cp .env.example .env
 ```
 
 ## Usage

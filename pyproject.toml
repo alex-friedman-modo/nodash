@@ -1,0 +1,26 @@
+[project]
+name = "nodash"
+version = "0.1.0"
+description = "NYC restaurant free delivery directory pipeline"
+requires-python = ">=3.11"
+dependencies = []
+
+[project.optional-dependencies]
+calling = [
+    "elevenlabs",
+    "twilio",
+]
+dev = [
+    "pytest",
+    "ruff",
+]
+
+[tool.ruff]
+line-length = 100
+
+[tool.hatch.build.targets.wheel]
+packages = ["pipeline", "scripts"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

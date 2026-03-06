@@ -8,13 +8,14 @@ data/
 .env.*
 *.env
 
-# Python
+# Python / uv
 __pycache__/
 *.pyc
 *.pyo
 .venv/
 venv/
 *.egg-info/
+uv.lock
 
 # Node (for web frontend later)
 node_modules/
