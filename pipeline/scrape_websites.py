@@ -683,7 +683,7 @@ SCRAPE_COLUMNS = [
     ("has_pdf_menu",          "INTEGER"),
     ("detected_language",     "TEXT"),
     ("pages_fetched",         "INTEGER"),
-    ("raw_text_preview",      "TEXT"),  # first 3000 chars for LLM
+    ("raw_text_preview",      "TEXT"),  # first 8000 chars for LLM
     ("fetch_error",           "TEXT"),
     ("scrape_snippets",       "TEXT"),  # JSON array of snippets
     ("needs_llm",             "INTEGER"),
@@ -776,7 +776,7 @@ def write_stage1(
         1 if third_party_only else 0,
         1 if has_pdf else 0,
         pages_fetched,
-        raw_text[:3000],
+        raw_text[:8000],
         json.dumps(regex.get("snippets", [])),
         fetch_error,
         1 if needs_llm else 0,
@@ -983,7 +983,7 @@ async def process_restaurant(
             html_regex = run_regex_extraction(raw_text_fallback)
             if any(html_regex.get(k) for k in ("delivery_fee", "delivery_minimum", "delivery_radius")):
                 regex = html_regex
-                combined_markdown = raw_text_fallback[:3000]  # use as content for LLM pass
+                combined_markdown = raw_text_fallback[:8000]  # use as content for LLM pass
 
         # Third-party detection from raw HTML
         third_party_detected = has_third_party_links(combined_html)
