@@ -394,20 +394,24 @@ Given the following website content, extract these fields. Return ONLY a JSON ob
 If a field cannot be determined, use null.
 
 Fields:
+- direct_delivery: boolean or null — TRUE if the restaurant does their OWN delivery (not just via DoorDash/UberEats/Grubhub). This is the most important field.
 - delivery_fee: string or null — "free", "$3.99", "varies by distance"
 - delivery_minimum: string or null — "$15", "$20", "none"
 - delivery_radius: string or null — "2 miles", "Manhattan only", "10001-10012"
 - ordering_method: "website" | "phone" | "toast" | "chownow" | "slice" | "square" | "other_platform" | null
-- online_order_url: string or null — direct URL to order online
-- third_party_only: boolean — true ONLY if the ONLY delivery option is DoorDash/UberEats/Grubhub with no independent ordering
+- online_order_url: string or null — direct URL to order online (NOT a DoorDash/UberEats link)
+- third_party_only: boolean — true ONLY if their ONLY delivery option is DoorDash/UberEats/Grubhub with no independent ordering
 - delivery_hours: string or null — delivery-specific hours if different from regular hours
-- confidence: "high" | "medium" | "low"
+- confidence: "high" | "medium" | "low" — your overall confidence in the extraction
 
 IMPORTANT:
-- "Free delivery on orders over $20" → delivery_fee="free", delivery_minimum="$20"
-- "Order on DoorDash" with no other option → third_party_only=true
-- Phone number + "call to order" → ordering_method="phone"
-- A link to toasttab.com/etc → capture as online_order_url AND set ordering_method
+- direct_delivery=true means the restaurant handles the delivery themselves (own drivers, own ordering)
+- direct_delivery=false means they ONLY use third-party apps like DoorDash for delivery
+- "Free delivery on orders over $20" → direct_delivery=true, delivery_fee="free", delivery_minimum="$20"
+- "Order on DoorDash" with no other option → direct_delivery=false, third_party_only=true
+- Phone number + "call to order" → direct_delivery=true, ordering_method="phone"
+- A link to toasttab.com/chownow.com/etc → direct_delivery=true (they control ordering), capture as online_order_url
+- If you see BOTH a DoorDash link AND a direct ordering option → direct_delivery=true, third_party_only=false
 
 Website content:
 ---
@@ -566,10 +570,16 @@ def write_llm(conn: sqlite3.Connection, place_id: str, llm: dict) -> None:
         "low":    "call_needed",
     }.get(confidence, "call_needed")
 
+    # Derive direct_delivery from LLM output
+    direct_delivery = llm.get("direct_delivery")
+    if direct_delivery is None and llm.get("third_party_only"):
+        direct_delivery = False  # infer from third_party_only
+
     conn.execute("""
         UPDATE restaurants SET
             scrape_stage         = 'llm_processed',
             scrape_status        = ?,
+            direct_delivery      = COALESCE(direct_delivery, ?),
             delivery_fee         = COALESCE(delivery_fee, ?),
             delivery_minimum     = COALESCE(delivery_minimum, ?),
             delivery_radius      = COALESCE(delivery_radius, ?),
@@ -582,6 +592,7 @@ def write_llm(conn: sqlite3.Connection, place_id: str, llm: dict) -> None:
         WHERE place_id = ?
     """, (
         status,
+        1 if direct_delivery is True else (0 if direct_delivery is False else None),
         llm.get("delivery_fee"),
         llm.get("delivery_minimum"),
         llm.get("delivery_radius"),
