@@ -570,10 +570,22 @@ def write_stage1(
     needs_llm = status == "has_text_ambiguous"
     ordering_method = platform if platform else ("website" if online_order_url else None)
 
+    # Infer direct_delivery from stage1 signals:
+    # - platform_identified: they use Toast/Slice/ChowNow/etc → they control ordering = direct
+    # - extracted_confident: regex found delivery fee/minimum → clearly offering own delivery
+    # - third_party_only: only DoorDash/UberEats links → not direct
+    if third_party_only:
+        inferred_direct = 0
+    elif status in ("platform_identified", "extracted_confident"):
+        inferred_direct = 1
+    else:
+        inferred_direct = None  # leave for LLM or call to determine
+
     conn.execute("""
         UPDATE restaurants SET
             scrape_stage         = 'fetched',
             scrape_status        = ?,
+            direct_delivery      = COALESCE(direct_delivery, ?),
             delivery_fee         = ?,
             delivery_minimum     = ?,
             delivery_radius      = ?,
@@ -592,6 +604,7 @@ def write_stage1(
         WHERE place_id = ?
     """, (
         status,
+        inferred_direct,
         regex.get("delivery_fee"),
         regex.get("delivery_minimum"),
         regex.get("delivery_radius"),
