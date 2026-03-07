@@ -60,20 +60,26 @@ SKIP_DOMAINS: set[str] = {
 }
 
 ORDERING_PLATFORMS: dict[str, str] = {
-    "toasttab.com":   "toast",
-    "square.site":    "square",
-    "squareup.com":   "square",
-    "order.online":   "square",
-    "chownow.com":    "chownow",
-    "slicelife.com":  "slice",
-    "order.slice.com":"slice",
-    "gloriafoods.com":"gloria",
-    "clover.com":     "clover",
-    "menufy.com":     "menufy",
-    "beyondmenu.com": "beyondmenu",
-    "hungrypage.com": "hungrypage",
-    "order.app":      "google",
-    "eat24.com":      "eat24",
+    "toasttab.com":     "toast",
+    "square.site":      "square",
+    "squareup.com":     "square",
+    "order.online":     "doordash_storefront",  # DoorDash Storefront, NOT Square
+    "chownow.com":      "chownow",
+    "slicelife.com":    "slice",
+    "order.slice.com":  "slice",
+    "gloriafoods.com":  "gloria",
+    "clover.com":       "clover",
+    "menufy.com":       "menufy",
+    "beyondmenu.com":   "beyondmenu",
+    "beyond.menu":      "beyondmenu",   # alternate domain
+    "hungrypage.com":   "hungrypage",
+    "order.app":        "google",
+    "eat24.com":        "eat24",
+    "tryotter.com":     "otter",         # Otter Direct Orders (commission-free)
+    "dine.online":      "dine_online",   # direct ordering platform
+    "getsauce.com":     "sauce",         # Sauce (commission-free delivery)
+    "foodbooking.com":  "foodbooking",   # FoodBooking direct ordering
+    "owner.com":        "owner",         # Owner.com restaurant platform
     # yelp.com is in SKIP_DOMAINS; don't duplicate here
 }
 
@@ -117,7 +123,7 @@ SUBPAGE_PATTERNS = [
 
 PDF_LINK_RE = re.compile(r'href=["\']([^"\']+\.pdf[^"\']*)["\']', re.I)
 ORDER_LINK_RE = re.compile(
-    r'href=["\']([^"\']*(?:toasttab|chownow|slicelife|square\.site|squareup|menufy|beyondmenu|clover)[^"\']*)["\']',
+    r'href=["\']([^"\']*(?:toasttab|chownow|slicelife|square\.site|squareup|menufy|beyondmenu|beyond\.menu|clover|getsauce|foodbooking|tryotter|dine\.online|owner\.com/s/)[^"\']*)["\']',
     re.I,
 )
 
@@ -161,7 +167,28 @@ _PARKED_INDICATORS = re.compile(
     r'parklogic\.com|sedoparking\.com|godaddy\.com/park|'
     r'hugedomains\.com|afternic\.com|domainlander|'
     r'This domain is for sale|domain has expired|'
-    r'Buy this domain',
+    r'Buy this domain|cdez\.com|dan\.com|sedo\.com',
+    re.I,
+)
+
+# Frameset redirect to parked/ad domain
+_FRAMESET_RE = re.compile(r'<frameset[^>]*>.*?<frame[^>]+src=["\']([^"\']+)["\']', re.I | re.DOTALL)
+
+# Cloudflare challenge page indicators
+_CLOUDFLARE_CHALLENGE_RE = re.compile(
+    r'<title>Just a moment\.\.\.</title>|_cf_chl_opt|challenge-platform',
+    re.I,
+)
+
+# JS redirect patterns (for tiny pages that just redirect via JS)
+_JS_REDIRECT_RE = re.compile(
+    r'window\.(?:location\.href|location)\s*=\s*["\']([^"\']+)["\']',
+    re.I,
+)
+
+# SPA indicators — page has a shell div but no server-rendered content
+_SPA_SHELL_RE = re.compile(
+    r'<div\s+id=["\'](?:app|root|__next|q-app|__nuxt)["\']>\s*</div>',
     re.I,
 )
 
@@ -170,7 +197,32 @@ def is_parked_domain(html: str) -> bool:
     """Detect parked/expired domain landing pages."""
     if len(html) < 100:
         return True  # trivially small response (e.g. just "404")
-    return bool(_PARKED_INDICATORS.search(html[:5000]))
+    if _PARKED_INDICATORS.search(html[:5000]):
+        return True
+    # Detect frameset-based redirects to parked domains
+    if len(html) < 1000:
+        m = _FRAMESET_RE.search(html)
+        if m:
+            return True  # tiny page with frameset = almost always parked
+    return False
+
+
+def is_cloudflare_blocked(html: str) -> bool:
+    """Detect Cloudflare challenge/bot-protection pages."""
+    return bool(_CLOUDFLARE_CHALLENGE_RE.search(html[:3000]))
+
+
+def detect_js_redirect(html: str) -> str | None:
+    """Extract target URL from a JS redirect page (for small pages only)."""
+    if len(html) > 2000:
+        return None  # only check small pages that are likely pure redirects
+    m = _JS_REDIRECT_RE.search(html)
+    return m.group(1) if m else None
+
+
+def is_spa_shell(html: str) -> bool:
+    """Detect SPA pages that have a shell div but no server-rendered content."""
+    return bool(_SPA_SHELL_RE.search(html))
 
 def find_external_order_links(html: str) -> list[tuple[str, str]]:
     """Return list of (url, platform) for known ordering platforms found in raw HTML."""
@@ -363,7 +415,7 @@ async def fetch_url(
 
 
 async def fetch_page_markdown(
-    client: httpx.AsyncClient, url: str
+    client: httpx.AsyncClient, url: str, follow_js_redirect: bool = True,
 ) -> tuple[str | None, str | None, str | None, str | None]:
     """
     Fetch a URL and return (markdown, raw_html, final_url, error).
@@ -375,11 +427,22 @@ async def fetch_page_markdown(
 
     raw_html = content.decode("utf-8", errors="replace")
 
+    # Detect Cloudflare challenge pages
+    if is_cloudflare_blocked(raw_html):
+        return None, raw_html, final_url, "cloudflare_blocked"
+
     # Check if final URL redirected to a skip domain
     if final_url:
         cat, _ = classify_domain(final_url)
         if cat == "skip":
             return None, raw_html, final_url, None  # raw_html still useful for link extraction
+
+    # Follow JS redirects (tiny pages that use window.location)
+    if follow_js_redirect:
+        js_target = detect_js_redirect(raw_html)
+        if js_target:
+            abs_target = urljoin(url, js_target)
+            return await fetch_page_markdown(client, abs_target, follow_js_redirect=False)
 
     md = await asyncio.to_thread(
         trafilatura.extract,
@@ -786,6 +849,9 @@ async def process_restaurant(
             fetch_error = homepage_err or "fetch_failed"
         else:
             final_url = final_url_resp
+            # Capture errors even when we got raw HTML (e.g. cloudflare_blocked)
+            if homepage_err:
+                fetch_error = homepage_err
 
             # Re-check if redirect landed on a skip domain
             if final_url:
@@ -853,6 +919,11 @@ async def process_restaurant(
         # Detect parked/dead domains early
         if combined_html and not combined_markdown.strip() and is_parked_domain(combined_html):
             fetch_error = "parked_domain"
+
+        # Detect SPA shells with no server-rendered content
+        if combined_html and not combined_markdown.strip() and not fetch_error:
+            if is_spa_shell(combined_html):
+                fetch_error = "spa_no_content"
 
         # Regex extraction — try trafilatura markdown first, fall back to raw HTML
         regex = run_regex_extraction(combined_markdown) if combined_markdown else {}
