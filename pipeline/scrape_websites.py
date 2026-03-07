@@ -567,29 +567,55 @@ async def llm_extract(text: str) -> dict | None:
     """Call Grok 4.1 fast to extract delivery info from ambiguous page text."""
     if not XAI_API_KEY:
         return None
-    raw = None
-    try:
-        import httpx as _httpx
-        truncated = text[:8000]  # ~2k tokens
-        payload = {
-            "model": "grok-4-1-fast-non-reasoning",
-            "messages": [{"role": "user", "content": LLM_PROMPT.replace("{text}", truncated)}],
-            "max_tokens": 512,
-            "temperature": 0,
-        }
-        async with _httpx.AsyncClient() as c:
-            resp = await c.post(
-                "https://api.x.ai/v1/chat/completions",
-                headers={
-                    "Authorization": f"Bearer {XAI_API_KEY}",
-                    "Content-Type": "application/json",
-                },
-                json=payload,
-                timeout=20,
-            )
-            resp.raise_for_status()
-            raw = resp.json()["choices"][0]["message"]["content"].strip()
 
+    truncated = text[:8000]
+    payload = {
+        "model": "grok-4-1-fast-non-reasoning",
+        "messages": [{"role": "user", "content": LLM_PROMPT.replace("{text}", truncated)}],
+        "max_tokens": 512,
+        "temperature": 0,
+    }
+    headers = {
+        "Authorization": f"Bearer {XAI_API_KEY}",
+        "Content-Type": "application/json",
+    }
+
+    raw = None
+    for attempt in range(3):  # retry up to 3 times on timeout/5xx
+        try:
+            async with httpx.AsyncClient() as c:
+                resp = await c.post(
+                    "https://api.x.ai/v1/chat/completions",
+                    headers=headers,
+                    json=payload,
+                    timeout=30,  # was 20 — xAI can be slow under load
+                )
+                resp.raise_for_status()
+                raw = resp.json()["choices"][0]["message"]["content"].strip()
+            break  # success — exit retry loop
+
+        except httpx.TimeoutException:
+            wait = 2 ** attempt
+            logger.warning("LLM timeout (attempt %d/3), retrying in %ds", attempt + 1, wait)
+            await asyncio.sleep(wait)
+            continue
+        except httpx.HTTPStatusError as e:
+            if e.response.status_code == 429:  # rate limit
+                wait = 5 * (attempt + 1)
+                logger.warning("LLM rate limited (429), retrying in %ds", wait)
+                await asyncio.sleep(wait)
+                continue
+            logger.warning("LLM HTTP error %d: %s", e.response.status_code, e.response.text[:100])
+            return None
+        except Exception as e:
+            logger.warning("LLM error [%s]: %s | raw: %s", type(e).__name__, e, (raw or "")[:200])
+            return None
+
+    if raw is None:
+        logger.warning("LLM failed after 3 attempts")
+        return None
+
+    try:
         # Strip markdown code fences if present
         if raw.startswith("```"):
             raw = re.sub(r"^```[a-z]*\n?", "", raw)
@@ -597,14 +623,13 @@ async def llm_extract(text: str) -> dict | None:
 
         parsed = json.loads(raw)
 
-        # Validate that the result is a dict
         if not isinstance(parsed, dict):
-            logger.warning("LLM returned non-dict type (%s): %s", type(parsed).__name__, raw[:200])
+            logger.warning("LLM returned non-dict (%s): %s", type(parsed).__name__, raw[:200])
             return None
 
         result = _sanitize_llm_result(parsed)
 
-        # REQUIRED_FIELDS check: if all key fields are null, downgrade to low
+        # REQUIRED_FIELDS check: if all key fields null, downgrade confidence to low
         if (result.get("direct_delivery") is None
                 and result.get("delivery_fee") is None
                 and result.get("delivery_minimum") is None
@@ -613,8 +638,7 @@ async def llm_extract(text: str) -> dict | None:
 
         return result
     except Exception as e:
-        logger.warning("LLM parse/API error: %s | raw response: %s", e, (raw or "")[:200])
-        print(f"    ⚠️  LLM error: {e}")
+        logger.warning("LLM parse error [%s]: %s | raw: %s", type(e).__name__, e, (raw or "")[:200])
         return None
 
 
