@@ -156,6 +156,22 @@ def find_subpage_links(html: str, base_url: str) -> list[str]:
 
 _STATIC_EXTENSIONS = re.compile(r'\.(ico|png|jpg|jpeg|gif|svg|css|js|woff|woff2|ttf|eot|map)(\?.*)?$', re.I)
 
+# Parked/ad domains — HTML contains these but no real restaurant content
+_PARKED_INDICATORS = re.compile(
+    r'parklogic\.com|sedoparking\.com|godaddy\.com/park|'
+    r'hugedomains\.com|afternic\.com|domainlander|'
+    r'This domain is for sale|domain has expired|'
+    r'Buy this domain',
+    re.I,
+)
+
+
+def is_parked_domain(html: str) -> bool:
+    """Detect parked/expired domain landing pages."""
+    if len(html) < 100:
+        return True  # trivially small response (e.g. just "404")
+    return bool(_PARKED_INDICATORS.search(html[:5000]))
+
 def find_external_order_links(html: str) -> list[tuple[str, str]]:
     """Return list of (url, platform) for known ordering platforms found in raw HTML."""
     results = []
@@ -306,7 +322,17 @@ HEADERS = {
         "AppleWebKit/537.36 (KHTML, like Gecko) "
         "Chrome/134.0.0.0 Safari/537.36"
     ),
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
     "Accept-Language": "en-US,en;q=0.9",
+    "Accept-Encoding": "gzip, deflate",
+    "Sec-Ch-Ua": '"Chromium";v="134", "Not:A-Brand";v="24", "Google Chrome";v="134"',
+    "Sec-Ch-Ua-Mobile": "?0",
+    "Sec-Ch-Ua-Platform": '"macOS"',
+    "Sec-Fetch-Dest": "document",
+    "Sec-Fetch-Mode": "navigate",
+    "Sec-Fetch-Site": "none",
+    "Sec-Fetch-User": "?1",
+    "Upgrade-Insecure-Requests": "1",
 }
 
 
@@ -325,20 +351,27 @@ async def fetch_url(
         return None, None, "timeout"
     except httpx.HTTPStatusError as e:
         return None, None, f"http_{e.response.status_code}"
+    except httpx.ConnectError as e:
+        err_str = str(e).lower()
+        if "ssl" in err_str or "certificate" in err_str:
+            return None, None, "ssl_error"
+        if "name" in err_str or "resolve" in err_str:
+            return None, None, "dns_failed"
+        return None, None, f"connect_error: {str(e)[:40]}"
     except Exception as e:
         return None, None, str(e)[:50]
 
 
 async def fetch_page_markdown(
     client: httpx.AsyncClient, url: str
-) -> tuple[str | None, str | None, str | None]:
+) -> tuple[str | None, str | None, str | None, str | None]:
     """
-    Fetch a URL and return (markdown, raw_html, final_url).
-    Returns (None, None, None) on failure.
+    Fetch a URL and return (markdown, raw_html, final_url, error).
+    Returns (None, None, None, error_str) on failure.
     """
     content, final_url, error = await fetch_url(client, url)
     if content is None:
-        return None, None, None
+        return None, None, None, error
 
     raw_html = content.decode("utf-8", errors="replace")
 
@@ -346,7 +379,7 @@ async def fetch_page_markdown(
     if final_url:
         cat, _ = classify_domain(final_url)
         if cat == "skip":
-            return None, raw_html, final_url  # raw_html still useful for link extraction
+            return None, raw_html, final_url, None  # raw_html still useful for link extraction
 
     md = await asyncio.to_thread(
         trafilatura.extract,
@@ -357,7 +390,7 @@ async def fetch_page_markdown(
         favor_recall=True,
         no_fallback=False,
     )
-    return md, raw_html, final_url
+    return md, raw_html, final_url, None
 
 
 # ── Stage classification ──────────────────────────────────────────────────────
@@ -725,10 +758,10 @@ async def process_restaurant(
             online_order_url = website
 
         # Fetch homepage
-        md, raw_html, final_url_resp = await fetch_page_markdown(client, website)
+        md, raw_html, final_url_resp, homepage_err = await fetch_page_markdown(client, website)
 
         if raw_html is None:
-            fetch_error = "fetch_failed"
+            fetch_error = homepage_err or "fetch_failed"
         else:
             final_url = final_url_resp
 
@@ -773,7 +806,7 @@ async def process_restaurant(
                         fetched_subpages += 1
                         continue
 
-                    sp_md, sp_html, _ = await fetch_page_markdown(client, sp_url)
+                    sp_md, sp_html, _, _ = await fetch_page_markdown(client, sp_url)
                     if sp_md:
                         all_markdown.append(sp_md)
                         fetched_subpages += 1
@@ -795,8 +828,22 @@ async def process_restaurant(
         combined_markdown = "\n\n---\n\n".join(all_markdown)
         combined_html     = "\n".join(all_raw_html)
 
-        # Regex extraction
+        # Detect parked/dead domains early
+        if combined_html and not combined_markdown.strip() and is_parked_domain(combined_html):
+            fetch_error = "parked_domain"
+
+        # Regex extraction — try trafilatura markdown first, fall back to raw HTML
         regex = run_regex_extraction(combined_markdown) if combined_markdown else {}
+
+        # Fallback: if trafilatura got nothing useful, try regex on raw HTML directly
+        if not combined_markdown.strip() and combined_html and not fetch_error:
+            # Strip HTML tags for a rough text version
+            raw_text_fallback = re.sub(r'<[^>]+>', ' ', combined_html)
+            raw_text_fallback = re.sub(r'\s+', ' ', raw_text_fallback)
+            html_regex = run_regex_extraction(raw_text_fallback)
+            if any(html_regex.get(k) for k in ("delivery_fee", "delivery_minimum", "delivery_radius")):
+                regex = html_regex
+                combined_markdown = raw_text_fallback[:3000]  # use as content for LLM pass
 
         # Third-party detection from raw HTML
         third_party_detected = has_third_party_links(combined_html)
