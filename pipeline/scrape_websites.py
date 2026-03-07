@@ -803,6 +803,7 @@ def write_llm(conn: sqlite3.Connection, place_id: str, llm: dict) -> None:
 async def process_restaurant(
     client: httpx.AsyncClient,
     sem: asyncio.Semaphore,
+    llm_sem: asyncio.Semaphore,
     conn: sqlite3.Connection,
     conn_lock: asyncio.Lock,
     row: sqlite3.Row,
@@ -961,8 +962,9 @@ async def process_restaurant(
 
         # ── Stage 2: LLM pass ─────────────────────────────────────────────────
         if run_llm and status == "has_text_ambiguous" and combined_markdown:
-            await asyncio.sleep(0.05)  # tiny back-off before LLM call
-            llm_result = await llm_extract(combined_markdown)
+            async with llm_sem:  # max 3 concurrent LLM calls — avoid xAI rate limits
+                await asyncio.sleep(0.1)
+                llm_result = await llm_extract(combined_markdown)
             if llm_result:
                 async with conn_lock:
                     write_llm(conn, place_id, llm_result)
@@ -1021,6 +1023,7 @@ async def run(
 
     conn_lock = asyncio.Lock()
     sem       = asyncio.Semaphore(12)
+    llm_sem   = asyncio.Semaphore(3)   # max 3 concurrent xAI API calls
 
     counts: dict[str, int] = {}
     done = 0
@@ -1055,7 +1058,7 @@ async def run(
                     print(f"  [{done}/{len(rows)}] LLM pass in progress...")
         else:
             tasks = [
-                process_restaurant(client, sem, conn, conn_lock, row, run_llm)
+                process_restaurant(client, sem, llm_sem, conn, conn_lock, row, run_llm)
                 for row in rows
             ]
 
