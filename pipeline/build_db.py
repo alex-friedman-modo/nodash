@@ -30,14 +30,31 @@ SEARCH_QUERIES = [
 ]
 
 DETAIL_FIELDS = ",".join([
+    # Identity
     "id", "displayName", "formattedAddress", "shortFormattedAddress",
-    "nationalPhoneNumber", "websiteUri", "location", "rating",
-    "userRatingCount", "priceLevel", "priceRange", "primaryType", "types",
+    "nationalPhoneNumber", "websiteUri", "location",
+    # Ratings & price
+    "rating", "userRatingCount", "priceLevel", "priceRange",
+    # Type & cuisine
+    "primaryType", "types",
+    # Ordering capabilities
     "delivery", "takeout", "dineIn", "curbsidePickup",
-    "regularSecondaryOpeningHours", "regularOpeningHours",
-    "paymentOptions", "editorialSummary", "businessStatus",
-    "servesVegetarianFood", "servesBrunch", "servesBreakfast",
-    "servesLunch", "servesDinner"
+    # Hours
+    "regularOpeningHours", "regularSecondaryOpeningHours",
+    # Payment
+    "paymentOptions",
+    # Description
+    "editorialSummary", "generativeSummary",
+    # Reviews (5 most recent — mine for delivery mentions)
+    "reviews",
+    # Status
+    "businessStatus",
+    # Dietary & meal filters
+    "servesVegetarianFood", "servesBreakfast", "servesBrunch",
+    "servesLunch", "servesDinner", "servesCocktails",
+    "servesDessert", "servesCoffee",
+    # Vibe filters
+    "outdoorSeating", "goodForGroups", "goodForChildren", "liveMusic",
 ])
 
 
@@ -46,6 +63,7 @@ DETAIL_FIELDS = ",".join([
 def init_db(conn):
     conn.execute("""
     CREATE TABLE IF NOT EXISTS restaurants (
+        -- Identity
         place_id            TEXT PRIMARY KEY,
         name                TEXT,
         address             TEXT,
@@ -57,20 +75,48 @@ def init_db(conn):
         website             TEXT,
         lat                 REAL,
         lng                 REAL,
+        -- Ratings & price
         rating              REAL,
         review_count        INTEGER,
         price_level         TEXT,
         price_low           INTEGER,
         price_high          INTEGER,
+        -- Type & cuisine
         primary_type        TEXT,
+        types               TEXT,   -- JSON array
+        -- Ordering capabilities
         delivery            INTEGER,
         takeout             INTEGER,
         dine_in             INTEGER,
-        delivery_hours      TEXT,
+        curbside_pickup     INTEGER,
+        -- Hours (JSON)
+        opening_hours       TEXT,   -- regularOpeningHours weekdayDescriptions
+        delivery_hours      TEXT,   -- secondary hours where type=DELIVERY
+        takeout_hours       TEXT,   -- secondary hours where type=TAKEOUT
+        -- Payment
         payment_cash_only   INTEGER,
+        payment_options     TEXT,   -- full JSON
+        -- Descriptions
         editorial_summary   TEXT,
-        serves_vegetarian   INTEGER,
+        generative_summary  TEXT,   -- AI-generated overview
+        -- Reviews (JSON array of 5)
+        reviews             TEXT,
+        -- Status
         business_status     TEXT,
+        -- Dietary & meal
+        serves_vegetarian   INTEGER,
+        serves_breakfast    INTEGER,
+        serves_brunch       INTEGER,
+        serves_lunch        INTEGER,
+        serves_dinner       INTEGER,
+        serves_cocktails    INTEGER,
+        serves_dessert      INTEGER,
+        serves_coffee       INTEGER,
+        -- Vibe
+        outdoor_seating     INTEGER,
+        good_for_groups     INTEGER,
+        good_for_children   INTEGER,
+        live_music          INTEGER,
         -- Verification fields (filled by calling pipeline)
         verified            INTEGER DEFAULT 0,
         direct_delivery     INTEGER,
@@ -144,28 +190,67 @@ def place_details(place_id: str) -> dict:
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
-def extract_delivery_hours(data: dict) -> str | None:
+def extract_secondary_hours(data: dict, hours_type: str) -> str | None:
     for h in data.get("regularSecondaryOpeningHours", []):
-        if h.get("secondaryHoursType") == "DELIVERY":
+        if h.get("secondaryHoursType") == hours_type:
             return json.dumps(h.get("weekdayDescriptions", []))
     return None
+
+
+def extract_reviews(data: dict) -> str | None:
+    reviews = data.get("reviews", [])
+    if not reviews:
+        return None
+    simplified = [
+        {
+            "rating": r.get("rating"),
+            "text": r.get("text", {}).get("text", ""),
+            "author": r.get("authorAttribution", {}).get("displayName", ""),
+            "time": r.get("relativePublishTimeDescription", ""),
+        }
+        for r in reviews[:5]
+    ]
+    return json.dumps(simplified)
+
+
+def bool_field(data: dict, key: str) -> int | None:
+    val = data.get(key)
+    if val is None:
+        return None
+    return 1 if val else 0
 
 
 def upsert_restaurant(conn, place: dict, zip_code: str, neighborhood: str, borough: str):
     loc = place.get("location", {})
     pr  = place.get("priceRange", {})
     po  = place.get("paymentOptions", {})
-    es  = place.get("editorialSummary", {})
+    oh  = place.get("regularOpeningHours", {})
+    gs  = place.get("generativeSummary", {})
+
     conn.execute("""
     INSERT OR REPLACE INTO restaurants (
         place_id, name, address, short_address,
         zip_code, neighborhood, borough,
         phone, website, lat, lng,
         rating, review_count, price_level, price_low, price_high,
-        primary_type, delivery, takeout, dine_in,
-        delivery_hours, payment_cash_only, editorial_summary,
-        serves_vegetarian, business_status, last_updated
-    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+        primary_type, types,
+        delivery, takeout, dine_in, curbside_pickup,
+        opening_hours, delivery_hours, takeout_hours,
+        payment_cash_only, payment_options,
+        editorial_summary, generative_summary, reviews,
+        business_status,
+        serves_vegetarian, serves_breakfast, serves_brunch,
+        serves_lunch, serves_dinner, serves_cocktails,
+        serves_dessert, serves_coffee,
+        outdoor_seating, good_for_groups, good_for_children, live_music,
+        last_updated
+    ) VALUES (
+        ?,?,?,?,?,?,?,?,?,?,?,
+        ?,?,?,?,?,?,?,?,?,?,?,
+        ?,?,?,?,?,?,?,?,?,
+        ?,?,?,?,?,?,?,?,
+        ?,?,?,?,?
+    )
     """, (
         place.get("id"),
         place.get("displayName", {}).get("text"),
@@ -181,14 +266,32 @@ def upsert_restaurant(conn, place: dict, zip_code: str, neighborhood: str, borou
         pr.get("startPrice", {}).get("units"),
         pr.get("endPrice", {}).get("units"),
         place.get("primaryType"),
-        1 if place.get("delivery")  else 0,
-        1 if place.get("takeout")   else 0,
-        1 if place.get("dineIn")    else 0,
-        extract_delivery_hours(place),
+        json.dumps(place.get("types", [])),
+        bool_field(place, "delivery"),
+        bool_field(place, "takeout"),
+        bool_field(place, "dineIn"),
+        bool_field(place, "curbsidePickup"),
+        json.dumps(oh.get("weekdayDescriptions", [])) if oh else None,
+        extract_secondary_hours(place, "DELIVERY"),
+        extract_secondary_hours(place, "TAKEOUT"),
         1 if po.get("acceptsCashOnly") else 0,
-        es.get("text"),
-        1 if place.get("servesVegetarianFood") else 0,
+        json.dumps(po) if po else None,
+        place.get("editorialSummary", {}).get("text"),
+        gs.get("overview", {}).get("text") if gs else None,
+        extract_reviews(place),
         place.get("businessStatus"),
+        bool_field(place, "servesVegetarianFood"),
+        bool_field(place, "servesBreakfast"),
+        bool_field(place, "servesBrunch"),
+        bool_field(place, "servesLunch"),
+        bool_field(place, "servesDinner"),
+        bool_field(place, "servesCocktails"),
+        bool_field(place, "servesDessert"),
+        bool_field(place, "servesCoffee"),
+        bool_field(place, "outdoorSeating"),
+        bool_field(place, "goodForGroups"),
+        bool_field(place, "goodForChildren"),
+        bool_field(place, "liveMusic"),
         datetime.now(timezone.utc).isoformat(),
     ))
 
