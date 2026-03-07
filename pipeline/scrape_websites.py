@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import os
 import re
 import sqlite3
@@ -32,6 +33,8 @@ import httpx
 import trafilatura
 
 warnings.filterwarnings("ignore")  # suppress SSL noise
+
+logger = logging.getLogger(__name__)
 
 ROOT    = Path(__file__).parent.parent
 DB_PATH = ROOT / "data" / "restaurants.db"
@@ -421,10 +424,37 @@ Website content:
 Return JSON only, no explanation."""
 
 
+VALID_CONFIDENCES = {"high", "medium", "low"}
+
+# Fields that should be str or None
+_STR_FIELDS = {
+    "delivery_fee", "delivery_minimum", "delivery_radius",
+    "delivery_hours", "online_order_url", "ordering_method",
+}
+# Fields that should be bool or None
+_BOOL_FIELDS = {"direct_delivery", "third_party_only"}
+
+
+def _sanitize_llm_result(data: dict) -> dict:
+    """Coerce each LLM output field to its expected type."""
+    out = {}
+    for key in _STR_FIELDS:
+        val = data.get(key)
+        out[key] = str(val) if val is not None else None
+    for key in _BOOL_FIELDS:
+        val = data.get(key)
+        out[key] = bool(val) if val is not None else None
+    # confidence must be one of high/medium/low
+    conf = data.get("confidence")
+    out["confidence"] = conf if conf in VALID_CONFIDENCES else "low"
+    return out
+
+
 async def llm_extract(text: str) -> dict | None:
     """Call Grok 4.1 fast to extract delivery info from ambiguous page text."""
     if not XAI_API_KEY:
         return None
+    raw = None
     try:
         import httpx as _httpx
         truncated = text[:8000]  # ~2k tokens
@@ -451,8 +481,26 @@ async def llm_extract(text: str) -> dict | None:
         if raw.startswith("```"):
             raw = re.sub(r"^```[a-z]*\n?", "", raw)
             raw = re.sub(r"\n?```$", "", raw)
-        return json.loads(raw)
+
+        parsed = json.loads(raw)
+
+        # Validate that the result is a dict
+        if not isinstance(parsed, dict):
+            logger.warning("LLM returned non-dict type (%s): %s", type(parsed).__name__, raw[:200])
+            return None
+
+        result = _sanitize_llm_result(parsed)
+
+        # REQUIRED_FIELDS check: if all key fields are null, downgrade to low
+        if (result.get("direct_delivery") is None
+                and result.get("delivery_fee") is None
+                and result.get("delivery_minimum") is None
+                and result.get("delivery_radius") is None):
+            result["confidence"] = "low"
+
+        return result
     except Exception as e:
+        logger.warning("LLM parse/API error: %s | raw response: %s", e, (raw or "")[:200])
         print(f"    ⚠️  LLM error: {e}")
         return None
 
@@ -563,45 +611,55 @@ def write_stage1(
 
 
 def write_llm(conn: sqlite3.Connection, place_id: str, llm: dict) -> None:
-    confidence = llm.get("confidence", "low")
-    status = {
-        "high":   "extracted_llm",
-        "medium": "extracted_llm_uncertain",
-        "low":    "call_needed",
-    }.get(confidence, "call_needed")
+    try:
+        confidence = llm.get("confidence", "low")
+        status = {
+            "high":   "extracted_llm",
+            "medium": "extracted_llm_uncertain",
+            "low":    "call_needed",
+        }.get(confidence, "call_needed")
 
-    # Derive direct_delivery from LLM output
-    direct_delivery = llm.get("direct_delivery")
-    if direct_delivery is None and llm.get("third_party_only"):
-        direct_delivery = False  # infer from third_party_only
+        # Derive direct_delivery from LLM output
+        direct_delivery = llm.get("direct_delivery")
+        if direct_delivery is None and llm.get("third_party_only"):
+            direct_delivery = False  # infer from third_party_only
 
-    conn.execute("""
-        UPDATE restaurants SET
-            scrape_stage         = 'llm_processed',
-            scrape_status        = ?,
-            direct_delivery      = COALESCE(direct_delivery, ?),
-            delivery_fee         = COALESCE(delivery_fee, ?),
-            delivery_minimum     = COALESCE(delivery_minimum, ?),
-            delivery_radius      = COALESCE(delivery_radius, ?),
-            ordering_method      = COALESCE(ordering_method, ?),
-            online_order_url     = COALESCE(online_order_url, ?),
-            third_party_only     = COALESCE(third_party_only, ?),
-            llm_confidence       = ?,
-            llm_processed_at     = datetime('now'),
-            scrape_updated       = datetime('now')
-        WHERE place_id = ?
-    """, (
-        status,
-        1 if direct_delivery is True else (0 if direct_delivery is False else None),
-        llm.get("delivery_fee"),
-        llm.get("delivery_minimum"),
-        llm.get("delivery_radius"),
-        llm.get("ordering_method"),
-        llm.get("online_order_url"),
-        1 if llm.get("third_party_only") else 0,
-        confidence,
-        place_id,
-    ))
+        conn.execute("""
+            UPDATE restaurants SET
+                scrape_stage         = 'llm_processed',
+                scrape_status        = ?,
+                direct_delivery      = COALESCE(direct_delivery, ?),
+                delivery_fee         = COALESCE(delivery_fee, ?),
+                delivery_minimum     = COALESCE(delivery_minimum, ?),
+                delivery_radius      = COALESCE(delivery_radius, ?),
+                ordering_method      = COALESCE(ordering_method, ?),
+                online_order_url     = COALESCE(online_order_url, ?),
+                third_party_only     = COALESCE(third_party_only, ?),
+                llm_confidence       = ?,
+                llm_processed_at     = datetime('now'),
+                scrape_updated       = datetime('now')
+            WHERE place_id = ?
+        """, (
+            status,
+            1 if direct_delivery is True else (0 if direct_delivery is False else None),
+            llm.get("delivery_fee"),
+            llm.get("delivery_minimum"),
+            llm.get("delivery_radius"),
+            llm.get("ordering_method"),
+            llm.get("online_order_url"),
+            1 if llm.get("third_party_only") else 0,
+            confidence,
+            place_id,
+        ))
+    except Exception as e:
+        logger.error("write_llm failed for place_id=%s: %s", place_id, e)
+        try:
+            conn.execute(
+                "UPDATE restaurants SET scrape_status = 'llm_error' WHERE place_id = ?",
+                (place_id,),
+            )
+        except Exception:
+            pass
 
 
 # ── Main pipeline ─────────────────────────────────────────────────────────────
@@ -756,6 +814,15 @@ async def process_restaurant(
                     "medium": "extracted_llm_uncertain",
                     "low":    "call_needed",
                 }.get(llm_result.get("confidence", "low"), "call_needed")
+            else:
+                # LLM failed (API error or parse failure) — mark call_needed
+                async with conn_lock:
+                    conn.execute(
+                        "UPDATE restaurants SET scrape_status = 'call_needed' WHERE place_id = ?",
+                        (place_id,),
+                    )
+                    conn.commit()
+                status = "call_needed"
 
         await asyncio.sleep(0.1)  # be polite to small restaurant servers
 
@@ -814,7 +881,14 @@ async def run(
                             conn.commit()
                         status = llm_result.get("confidence", "low")
                     else:
-                        status = "llm_error"
+                        # LLM failed — mark call_needed
+                        async with conn_lock:
+                            conn.execute(
+                                "UPDATE restaurants SET scrape_status = 'call_needed' WHERE place_id = ?",
+                                (row["place_id"],),
+                            )
+                            conn.commit()
+                        status = "call_needed"
                 else:
                     status = "no_text"
                 counts[status] = counts.get(status, 0) + 1
