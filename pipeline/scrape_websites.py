@@ -154,11 +154,16 @@ def find_subpage_links(html: str, base_url: str) -> list[str]:
     return sorted(found, key=priority)[:5]  # top 5 candidates, will fetch up to 3
 
 
+_STATIC_EXTENSIONS = re.compile(r'\.(ico|png|jpg|jpeg|gif|svg|css|js|woff|woff2|ttf|eot|map)(\?.*)?$', re.I)
+
 def find_external_order_links(html: str) -> list[tuple[str, str]]:
     """Return list of (url, platform) for known ordering platforms found in raw HTML."""
     results = []
     for m in ORDER_LINK_RE.finditer(html):
         url = m.group(1)
+        # Skip static assets — favicon.ico, images, CSS, JS, etc.
+        if _STATIC_EXTENSIONS.search(url):
+            continue
         _, platform = classify_domain(url)
         if platform:
             results.append((url, platform))
