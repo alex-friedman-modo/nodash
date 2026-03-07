@@ -540,27 +540,57 @@ Return JSON only, no explanation."""
 VALID_CONFIDENCES = {"high", "medium", "low"}
 
 # Fields that should be str or None
-_STR_FIELDS = {
-    "delivery_fee", "delivery_minimum", "delivery_radius",
-    "delivery_hours", "online_order_url", "ordering_method",
-}
-# Fields that should be bool or None
-_BOOL_FIELDS = {"direct_delivery", "third_party_only", "third_party", "delivery_menu"}
+from typing import Literal
+from pydantic import BaseModel, field_validator, model_validator
 
+class LLMDeliveryResult(BaseModel):
+    """Validated schema for Grok LLM delivery extraction output."""
+    direct_delivery:  bool | None = None
+    delivery_fee:     str | None  = None
+    delivery_minimum: str | None  = None
+    delivery_radius:  str | None  = None
+    ordering_method:  str | None  = None
+    online_order_url: str | None  = None
+    third_party:      bool | None = None
+    third_party_only: bool | None = None
+    delivery_menu:    bool | None = None
+    delivery_hours:   str | None  = None
+    confidence:       Literal["high", "medium", "low"] = "low"
 
-def _sanitize_llm_result(data: dict) -> dict:
-    """Coerce each LLM output field to its expected type."""
-    out = {}
-    for key in _STR_FIELDS:
-        val = data.get(key)
-        out[key] = str(val) if val is not None else None
-    for key in _BOOL_FIELDS:
-        val = data.get(key)
-        out[key] = bool(val) if val is not None else None
-    # confidence must be one of high/medium/low
-    conf = data.get("confidence")
-    out["confidence"] = conf if conf in VALID_CONFIDENCES else "low"
-    return out
+    @field_validator("delivery_fee", "delivery_minimum", "delivery_radius",
+                     "ordering_method", "online_order_url", "delivery_hours",
+                     mode="before")
+    @classmethod
+    def coerce_str(cls, v):
+        return str(v) if v is not None else None
+
+    @field_validator("direct_delivery", "third_party", "third_party_only", "delivery_menu",
+                     mode="before")
+    @classmethod
+    def coerce_bool(cls, v):
+        if v is None:
+            return None
+        if isinstance(v, str):
+            return v.lower() not in ("false", "no", "0", "null", "none")
+        return bool(v)
+
+    @field_validator("confidence", mode="before")
+    @classmethod
+    def coerce_confidence(cls, v):
+        return v if v in ("high", "medium", "low") else "low"
+
+    @model_validator(mode="after")
+    def downgrade_empty_result(self):
+        """If all key fields are null, downgrade confidence to low."""
+        if (self.direct_delivery is None
+                and self.delivery_fee is None
+                and self.delivery_minimum is None
+                and self.delivery_radius is None):
+            self.confidence = "low"
+        return self
+
+    def to_dict(self) -> dict:
+        return self.model_dump()
 
 
 async def llm_extract(text: str) -> dict | None:
@@ -627,16 +657,8 @@ async def llm_extract(text: str) -> dict | None:
             logger.warning("LLM returned non-dict (%s): %s", type(parsed).__name__, raw[:200])
             return None
 
-        result = _sanitize_llm_result(parsed)
-
-        # REQUIRED_FIELDS check: if all key fields null, downgrade confidence to low
-        if (result.get("direct_delivery") is None
-                and result.get("delivery_fee") is None
-                and result.get("delivery_minimum") is None
-                and result.get("delivery_radius") is None):
-            result["confidence"] = "low"
-
-        return result
+        result = LLMDeliveryResult(**parsed)
+        return result.to_dict()
     except Exception as e:
         logger.warning("LLM parse error [%s]: %s | raw: %s", type(e).__name__, e, (raw or "")[:200])
         return None
