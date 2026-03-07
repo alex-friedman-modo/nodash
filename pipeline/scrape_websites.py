@@ -573,7 +573,7 @@ async def llm_extract(text: str) -> dict | None:
         truncated = text[:8000]  # ~2k tokens
         payload = {
             "model": "grok-4-1-fast-non-reasoning",
-            "messages": [{"role": "user", "content": LLM_PROMPT.format(text=truncated)}],
+            "messages": [{"role": "user", "content": LLM_PROMPT.replace("{text}", truncated)}],
             "max_tokens": 512,
             "temperature": 0,
         }
