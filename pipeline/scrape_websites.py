@@ -431,28 +431,40 @@ def classify_result(
 
 LLM_PROMPT = """You are extracting delivery information from a restaurant's website text.
 
-Given the following website content, extract these fields. Return ONLY a JSON object.
-If a field cannot be determined, use null.
+Return ONLY a JSON object with ALL fields below. Use null if unknown — do not omit fields.
 
-Fields:
-- direct_delivery: boolean or null — TRUE if the restaurant does their OWN delivery (not just via DoorDash/UberEats/Grubhub). This is the most important field.
-- delivery_fee: string or null — "free", "$3.99", "varies by distance"
-- delivery_minimum: string or null — "$15", "$20", "none"
-- delivery_radius: string or null — "2 miles", "Manhattan only", "10001-10012"
-- ordering_method: "website" | "phone" | "toast" | "chownow" | "slice" | "square" | "other_platform" | null
-- online_order_url: string or null — direct URL to order online (NOT a DoorDash/UberEats link)
-- third_party_only: boolean — true ONLY if their ONLY delivery option is DoorDash/UberEats/Grubhub with no independent ordering
-- delivery_hours: string or null — delivery-specific hours if different from regular hours
-- confidence: "high" | "medium" | "low" — your overall confidence in the extraction
+{
+  "direct_delivery": true/false/null,
+  "delivery_fee": "free" | "$2.99" | "10%" | "varies" | null,
+  "delivery_minimum": "$15" | "$20" | "none" | null,
+  "delivery_radius": "within 1 mile" | "10002-10012" | "Park Slope only" | null,
+  "ordering_method": "website" | "phone" | "toast" | "chownow" | "slice" | "square" | "other_platform" | null,
+  "online_order_url": "https://..." | null,
+  "third_party": true/false/null,
+  "delivery_menu": true/false/null,
+  "delivery_hours": "11am-9pm Mon-Fri" | null,
+  "confidence": "high" | "medium" | "low"
+}
 
-IMPORTANT:
-- direct_delivery=true means the restaurant handles the delivery themselves (own drivers, own ordering)
-- direct_delivery=false means they ONLY use third-party apps like DoorDash for delivery
+FIELD DEFINITIONS:
+- direct_delivery: TRUE if restaurant handles their OWN delivery (own drivers, own ordering system). FALSE if ONLY via DoorDash/UberEats/Grubhub.
+- delivery_fee: exact fee charged for delivery. "free" if explicitly free.
+- delivery_minimum: minimum order amount required for delivery.
+- delivery_radius: geographic area they deliver to (miles, zip codes, neighborhood names).
+- ordering_method: HOW to place a delivery order. "phone" = call them. "website" = their own site. Named platforms = Toast/ChowNow/Slice/Square/etc.
+- online_order_url: direct link to order page. Must NOT be a DoorDash/UberEats/Grubhub URL.
+- third_party: TRUE if they mention DoorDash/UberEats/Grubhub/Seamless as delivery options (even if they also have direct).
+- delivery_menu: TRUE if they mention a separate or limited delivery menu vs. full dine-in menu.
+- delivery_hours: delivery-specific hours ONLY if different from regular restaurant hours.
+- confidence: how confident you are in direct_delivery specifically. "high" = explicitly stated. "medium" = strongly implied. "low" = guessing.
+
+RULES:
 - "Free delivery on orders over $20" → direct_delivery=true, delivery_fee="free", delivery_minimum="$20"
-- "Order on DoorDash" with no other option → direct_delivery=false, third_party_only=true
+- "Order on DoorDash" only → direct_delivery=false, third_party=true
 - Phone number + "call to order" → direct_delivery=true, ordering_method="phone"
-- A link to toasttab.com/chownow.com/etc → direct_delivery=true (they control ordering), capture as online_order_url
-- If you see BOTH a DoorDash link AND a direct ordering option → direct_delivery=true, third_party_only=false
+- Toast/ChowNow/Slice/Square link → direct_delivery=true, capture URL as online_order_url
+- Both DoorDash AND direct option → direct_delivery=true, third_party=true
+- If you see a delivery fee or minimum, direct_delivery is almost certainly true
 
 Website content:
 ---
@@ -470,7 +482,7 @@ _STR_FIELDS = {
     "delivery_hours", "online_order_url", "ordering_method",
 }
 # Fields that should be bool or None
-_BOOL_FIELDS = {"direct_delivery", "third_party_only"}
+_BOOL_FIELDS = {"direct_delivery", "third_party_only", "third_party", "delivery_menu"}
 
 
 def _sanitize_llm_result(data: dict) -> dict:
@@ -557,6 +569,8 @@ SCRAPE_COLUMNS = [
     ("ordering_method",       "TEXT"),
     ("third_party_detected",  "INTEGER"),
     ("third_party_only",      "INTEGER"),
+    ("third_party",           "INTEGER"),  # broader: mentions any 3rd-party app
+    ("delivery_menu",         "INTEGER"),  # separate/limited delivery menu
     ("has_pdf_menu",          "INTEGER"),
     ("detected_language",     "TEXT"),
     ("pages_fetched",         "INTEGER"),
@@ -686,6 +700,9 @@ def write_llm(conn: sqlite3.Connection, place_id: str, llm: dict) -> None:
                 ordering_method      = COALESCE(ordering_method, ?),
                 online_order_url     = COALESCE(online_order_url, ?),
                 third_party_only     = COALESCE(third_party_only, ?),
+                third_party          = COALESCE(third_party, ?),
+                delivery_menu        = COALESCE(delivery_menu, ?),
+                delivery_hours       = COALESCE(delivery_hours, ?),
                 llm_confidence       = ?,
                 llm_processed_at     = datetime('now'),
                 scrape_updated       = datetime('now')
@@ -698,7 +715,12 @@ def write_llm(conn: sqlite3.Connection, place_id: str, llm: dict) -> None:
             llm.get("delivery_radius"),
             llm.get("ordering_method"),
             llm.get("online_order_url"),
-            1 if llm.get("third_party_only") else 0,
+            # third_party_only = no direct delivery at all
+            1 if (llm.get("third_party") and not llm.get("direct_delivery")) else 0,
+            # third_party = mentions apps even if also has direct
+            1 if llm.get("third_party") else 0,
+            1 if llm.get("delivery_menu") else None,
+            llm.get("delivery_hours"),
             confidence,
             place_id,
         ))
