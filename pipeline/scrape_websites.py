@@ -39,7 +39,13 @@ logger = logging.getLogger(__name__)
 ROOT    = Path(__file__).parent.parent
 DB_PATH = ROOT / "data" / "restaurants.db"
 
-XAI_API_KEY = os.environ.get("XAI_API_KEY")
+XAI_API_KEY        = os.environ.get("XAI_API_KEY")
+ANTHROPIC_API_KEY  = os.environ.get("ANTHROPIC_API_KEY")
+OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY")
+
+# LLM backend config — override via LLM_BACKEND env var
+# Options: "grok" (default, fast/cheap) | "gemini" (smarter, for re-verification) | "sonnet"
+LLM_BACKEND = os.environ.get("LLM_BACKEND", "grok")
 
 
 # ── Domain / platform classification ─────────────────────────────────────────
@@ -581,11 +587,16 @@ class LLMDeliveryResult(BaseModel):
 
     @model_validator(mode="after")
     def downgrade_empty_result(self):
-        """If all key fields are null, downgrade confidence to low."""
-        if (self.direct_delivery is None
-                and self.delivery_fee is None
-                and self.delivery_minimum is None
-                and self.delivery_radius is None):
+        """If we have no useful data at all, downgrade confidence to low."""
+        has_any_signal = any([
+            self.direct_delivery is not None,
+            self.delivery_fee is not None,
+            self.delivery_minimum is not None,
+            self.delivery_radius is not None,
+            self.ordering_method is not None,
+            self.online_order_url is not None,
+        ])
+        if not has_any_signal:
             self.confidence = "low"
         return self
 
@@ -594,34 +605,80 @@ class LLMDeliveryResult(BaseModel):
 
 
 async def llm_extract(text: str) -> dict | None:
-    """Call Grok 4.1 fast to extract delivery info from ambiguous page text."""
-    if not XAI_API_KEY:
-        return None
-
+    """Call LLM to extract delivery info. Backend selectable via LLM_BACKEND env var."""
     truncated = text[:8000]
-    payload = {
-        "model": "grok-4-1-fast-non-reasoning",
-        "messages": [{"role": "user", "content": LLM_PROMPT.replace("{text}", truncated)}],
-        "max_tokens": 512,
-        "temperature": 0,
-    }
-    headers = {
-        "Authorization": f"Bearer {XAI_API_KEY}",
-        "Content-Type": "application/json",
-    }
+    content   = LLM_PROMPT.replace("{text}", truncated)
+
+    if LLM_BACKEND == "gemini":
+        # Gemini 3 Flash via OpenRouter — smarter, structured JSON output
+        if not OPENROUTER_API_KEY:
+            logger.warning("LLM_BACKEND=gemini but OPENROUTER_API_KEY not set")
+            return None
+        payload = {
+            "model": "google/gemini-3-flash-preview",
+            "messages": [{"role": "user", "content": content}],
+            "max_tokens": 512,
+            "temperature": 0,
+            "response_format": {"type": "json_object"},
+        }
+        headers = {
+            "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+            "Content-Type": "application/json",
+            "HTTP-Referer": "https://github.com/alex-friedman-modo/nodash",
+        }
+        api_url = "https://openrouter.ai/api/v1/chat/completions"
+        def get_content(resp_json: dict) -> str:
+            return resp_json["choices"][0]["message"]["content"].strip()
+
+    elif LLM_BACKEND == "sonnet":
+        # Claude Sonnet via Anthropic API
+        if not ANTHROPIC_API_KEY:
+            logger.warning("LLM_BACKEND=sonnet but ANTHROPIC_API_KEY not set")
+            return None
+        payload = {
+            "model": "claude-sonnet-4-6",
+            "messages": [{"role": "user", "content": content}],
+            "max_tokens": 512,
+        }
+        headers = {
+            "x-api-key": ANTHROPIC_API_KEY,
+            "anthropic-version": "2023-06-01",
+            "Content-Type": "application/json",
+        }
+        api_url = "https://api.anthropic.com/v1/messages"
+        def get_content(resp_json: dict) -> str:
+            return resp_json["content"][0]["text"].strip()
+
+    else:
+        # Grok (default) — fast/cheap
+        if not XAI_API_KEY:
+            return None
+        payload = {
+            "model": "grok-4-1-fast-non-reasoning",
+            "messages": [{"role": "user", "content": content}],
+            "max_tokens": 512,
+            "temperature": 0,
+        }
+        headers = {
+            "Authorization": f"Bearer {XAI_API_KEY}",
+            "Content-Type": "application/json",
+        }
+        api_url = "https://api.x.ai/v1/chat/completions"
+        def get_content(resp_json: dict) -> str:
+            return resp_json["choices"][0]["message"]["content"].strip()
 
     raw = None
     for attempt in range(3):  # retry up to 3 times on timeout/5xx
         try:
             async with httpx.AsyncClient() as c:
                 resp = await c.post(
-                    "https://api.x.ai/v1/chat/completions",
+                    api_url,
                     headers=headers,
                     json=payload,
-                    timeout=30,  # was 20 — xAI can be slow under load
+                    timeout=30,
                 )
                 resp.raise_for_status()
-                raw = resp.json()["choices"][0]["message"]["content"].strip()
+                raw = get_content(resp.json())
             break  # success — exit retry loop
 
         except httpx.TimeoutException:
@@ -1047,7 +1104,10 @@ async def run(
     ensure_columns(conn)
 
     # Build query
-    if llm_only:
+    if llm_only == "uncertain":
+        # Re-run LLM on medium-confidence results with a smarter model
+        query = "SELECT place_id, name, website, raw_text_preview FROM restaurants WHERE scrape_status = 'extracted_llm_uncertain'"
+    elif llm_only:
         query = "SELECT place_id, name, website, raw_text_preview FROM restaurants WHERE needs_llm = 1"
     else:
         query = "SELECT place_id, name, website FROM restaurants WHERE website IS NOT NULL"
@@ -1156,14 +1216,17 @@ if __name__ == "__main__":
     parser.add_argument("borough",     nargs="?",       help="Filter by borough")
     parser.add_argument("--rescrape",  action="store_true")
     parser.add_argument("--limit",     type=int)
-    parser.add_argument("--llm-only",  action="store_true", help="Only run LLM pass on already-fetched ambiguous restaurants")
-    parser.add_argument("--no-llm",    action="store_true", help="Skip LLM pass (faster, more goes to call list)")
+    parser.add_argument("--llm-only",         action="store_true", help="Re-run LLM on needs_llm=1 restaurants")
+    parser.add_argument("--reverify-uncertain",action="store_true", help="Re-run LLM on extracted_llm_uncertain using smarter model (set LLM_BACKEND=sonnet)")
+    parser.add_argument("--no-llm",           action="store_true", help="Skip LLM pass (faster, more goes to call list)")
     args = parser.parse_args()
+
+    llm_only = "uncertain" if args.reverify_uncertain else (True if args.llm_only else False)
 
     asyncio.run(run(
         borough  = args.borough,
         limit    = args.limit,
         rescrape = args.rescrape,
-        llm_only = args.llm_only,
+        llm_only = llm_only,
         run_llm  = not args.no_llm,
     ))
