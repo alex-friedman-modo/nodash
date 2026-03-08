@@ -1107,6 +1107,9 @@ async def run(
     if llm_only == "uncertain":
         # Re-run LLM on medium-confidence results with a smarter model
         query = "SELECT place_id, name, website, raw_text_preview FROM restaurants WHERE scrape_status = 'extracted_llm_uncertain'"
+    elif llm_only == "failed":
+        # Re-run LLM on call_needed that have stored page text
+        query = "SELECT place_id, name, website, raw_text_preview FROM restaurants WHERE scrape_status = 'call_needed' AND raw_text_preview IS NOT NULL AND LENGTH(raw_text_preview) > 100"
     elif llm_only:
         query = "SELECT place_id, name, website, raw_text_preview FROM restaurants WHERE needs_llm = 1"
     else:
@@ -1217,11 +1220,12 @@ if __name__ == "__main__":
     parser.add_argument("--rescrape",  action="store_true")
     parser.add_argument("--limit",     type=int)
     parser.add_argument("--llm-only",         action="store_true", help="Re-run LLM on needs_llm=1 restaurants")
-    parser.add_argument("--reverify-uncertain",action="store_true", help="Re-run LLM on extracted_llm_uncertain using smarter model (set LLM_BACKEND=sonnet)")
+    parser.add_argument("--reverify-uncertain",action="store_true", help="Re-run LLM on extracted_llm_uncertain using smarter model")
+    parser.add_argument("--reverify-failed",   action="store_true", help="Re-run LLM on call_needed that have stored page text")
     parser.add_argument("--no-llm",           action="store_true", help="Skip LLM pass (faster, more goes to call list)")
     args = parser.parse_args()
 
-    llm_only = "uncertain" if args.reverify_uncertain else (True if args.llm_only else False)
+    llm_only = "uncertain" if args.reverify_uncertain else ("failed" if args.reverify_failed else (True if args.llm_only else False))
 
     asyncio.run(run(
         borough  = args.borough,
