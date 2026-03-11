@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Phone, Globe, ExternalLink } from "lucide-react";
+import { Phone, ExternalLink } from "lucide-react";
 import { Restaurant, formatCuisine, formatOrderingMethod } from "@/lib/db";
 
 export default function RestaurantCard({ r }: { r: Restaurant }) {
@@ -15,28 +15,36 @@ export default function RestaurantCard({ r }: { r: Restaurant }) {
   const minDisplay = r.delivery_minimum ? `${r.delivery_minimum} min` : null;
 
   return (
-    <Link
-      href={`/restaurants/${encodeURIComponent(r.place_id)}`}
-      className="block bg-zinc-900 border border-zinc-800 rounded-lg p-4 hover:border-green-500/50 hover:bg-zinc-900/80 transition-all group"
-    >
+    <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-4 hover:border-green-500/50 transition-all group">
       <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0 flex-1">
+        <Link
+          href={`/restaurants/${encodeURIComponent(r.place_id)}`}
+          className="min-w-0 flex-1"
+        >
           <h3 className="font-semibold text-white text-lg leading-tight group-hover:text-green-400 transition-colors truncate">
             {r.name}
           </h3>
-          <div className="flex items-center gap-2 mt-1">
+          <div className="flex items-center gap-2 mt-1 flex-wrap">
             <span className="text-sm text-zinc-400">{r.neighborhood}</span>
             <span className="text-zinc-600">·</span>
             <span className="text-sm text-zinc-500">{cuisine}</span>
+            {r.rating && (
+              <>
+                <span className="text-zinc-600">·</span>
+                <span className="text-sm text-zinc-500">
+                  ⭐ {r.rating}
+                  {r.review_count ? ` (${r.review_count.toLocaleString()})` : ""}
+                </span>
+              </>
+            )}
           </div>
-        </div>
-        <div className="flex-shrink-0">
-          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-500/10 text-green-400 border border-green-500/20">
-            Direct ✓
-          </span>
-        </div>
+        </Link>
+        <span className="flex-shrink-0 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-500/10 text-green-400 border border-green-500/20">
+          Direct ✓
+        </span>
       </div>
 
+      {/* Delivery info tags */}
       <div className="flex flex-wrap items-center gap-2 mt-3">
         {feeDisplay && (
           <span className="text-sm text-zinc-300 bg-zinc-800 px-2 py-0.5 rounded">
@@ -53,20 +61,31 @@ export default function RestaurantCard({ r }: { r: Restaurant }) {
         </span>
       </div>
 
-      <div className="flex items-center gap-4 mt-3 text-sm text-zinc-400">
+      {/* Action buttons */}
+      <div className="flex items-center gap-2 mt-3">
+        {r.online_order_url && (
+          <a
+            href={r.online_order_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            className="inline-flex items-center gap-1.5 bg-green-600 hover:bg-green-500 text-white text-sm font-medium rounded-md px-3 py-1.5 transition-colors"
+          >
+            <ExternalLink className="w-3.5 h-3.5" />
+            Order Online
+          </a>
+        )}
         {r.phone && (
-          <span className="flex items-center gap-1">
+          <a
+            href={`tel:${r.phone}`}
+            onClick={(e) => e.stopPropagation()}
+            className="inline-flex items-center gap-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-sm rounded-md px-3 py-1.5 transition-colors"
+          >
             <Phone className="w-3.5 h-3.5" />
             {r.phone}
-          </span>
-        )}
-        {r.rating && (
-          <span>
-            ⭐ {r.rating}
-            {r.review_count ? ` (${r.review_count.toLocaleString()})` : ""}
-          </span>
+          </a>
         )}
       </div>
-    </Link>
+    </div>
   );
 }

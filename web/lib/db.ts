@@ -54,6 +54,7 @@ export interface Restaurant {
 export interface RestaurantFilters {
   borough?: string;
   neighborhood?: string;
+  cuisine?: string;
   search?: string;
   limit?: number;
   offset?: number;
@@ -77,9 +78,14 @@ export function getRestaurants(filters: RestaurantFilters = {}): {
     params.push(filters.neighborhood);
   }
 
+  if (filters.cuisine) {
+    conditions.push("primary_type = ?");
+    params.push(filters.cuisine);
+  }
+
   if (filters.search) {
-    conditions.push("name LIKE ?");
-    params.push(`%${filters.search}%`);
+    conditions.push("(name LIKE ? OR neighborhood LIKE ?)");
+    params.push(`%${filters.search}%`, `%${filters.search}%`);
   }
 
   const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
@@ -153,6 +159,23 @@ export function getNeighborhoods(borough?: string): string[] {
     )
     .all(...params) as { neighborhood: string }[];
   return rows.map((r) => r.neighborhood).filter(Boolean);
+}
+
+export function getCuisineCounts(): { cuisine: string; label: string; count: number }[] {
+  const db = getDb();
+  const rows = db
+    .prepare(
+      `SELECT primary_type, COUNT(*) as count FROM restaurants
+       WHERE direct_delivery = 1 AND primary_type IS NOT NULL
+       GROUP BY primary_type HAVING count >= 10
+       ORDER BY count DESC`
+    )
+    .all() as { primary_type: string; count: number }[];
+  return rows.map((r) => ({
+    cuisine: r.primary_type,
+    label: formatCuisine(r.primary_type),
+    count: r.count,
+  }));
 }
 
 export function getTotalDirectDelivery(): number {

@@ -1,18 +1,20 @@
-import { getRestaurants, getBoroughCounts, getTotalDirectDelivery } from "@/lib/db";
+import { getRestaurants, getBoroughCounts, getTotalDirectDelivery, getCuisineCounts } from "@/lib/db";
 import RestaurantCard from "@/components/RestaurantCard";
 import SearchBar from "@/components/SearchBar";
 import BoroughTabs from "@/components/BoroughTabs";
+import CuisineFilter from "@/components/CuisineFilter";
 
 export const dynamic = "force-dynamic";
 
 export default async function Home({
   searchParams,
 }: {
-  searchParams: Promise<{ borough?: string; search?: string; page?: string }>;
+  searchParams: Promise<{ borough?: string; search?: string; cuisine?: string; page?: string }>;
 }) {
   const params = await searchParams;
   const borough = params.borough || "All";
   const search = params.search || "";
+  const cuisine = params.cuisine || "";
   const page = parseInt(params.page || "1");
   const limit = 50;
   const offset = (page - 1) * limit;
@@ -21,11 +23,13 @@ export default async function Home({
   let total = 0;
   let boroughCounts: Record<string, number> = {};
   let totalDirect = 0;
+  let cuisinesList: ReturnType<typeof getCuisineCounts> = [];
 
   try {
     const result = getRestaurants({
       borough: borough === "All" ? undefined : borough,
       search: search || undefined,
+      cuisine: cuisine || undefined,
       limit,
       offset,
     });
@@ -33,6 +37,7 @@ export default async function Home({
     total = result.total;
     boroughCounts = getBoroughCounts();
     totalDirect = getTotalDirectDelivery();
+    cuisinesList = getCuisineCounts();
   } catch (e) {
     console.error("DB error on homepage:", e);
   }
@@ -43,7 +48,10 @@ export default async function Home({
       <nav className="border-b border-zinc-800 px-4 py-3">
         <div className="max-w-5xl mx-auto flex items-center justify-between">
           <span className="font-bold text-lg">nodash</span>
-          <a href="/about" className="text-sm text-zinc-400 hover:text-white">About</a>
+          <div className="flex items-center gap-4">
+            <a href="/feedback" className="text-sm text-zinc-400 hover:text-white">Feedback</a>
+            <a href="/about" className="text-sm text-zinc-400 hover:text-white">About</a>
+          </div>
         </div>
       </nav>
 
@@ -81,7 +89,12 @@ export default async function Home({
       {/* Search + Filters */}
       <section className="sticky top-0 z-10 bg-zinc-950/95 backdrop-blur border-b border-zinc-800">
         <div className="max-w-5xl mx-auto px-4 py-4">
-          <SearchBar initialSearch={search} />
+          <div className="flex gap-2">
+            <div className="flex-1">
+              <SearchBar initialSearch={search} />
+            </div>
+            <CuisineFilter cuisines={cuisinesList} activeCuisine={cuisine} />
+          </div>
           <BoroughTabs
             activeBoroughs={borough}
             boroughCounts={boroughCounts}
@@ -116,7 +129,7 @@ export default async function Home({
           <div className="flex justify-center gap-4 mt-8">
             {page > 1 && (
               <a
-                href={`/?borough=${borough}&search=${search}&page=${page - 1}`}
+                href={`/?borough=${borough}&search=${search}&cuisine=${cuisine}&page=${page - 1}`}
                 className="px-4 py-2 bg-zinc-800 rounded hover:bg-zinc-700 text-sm"
               >
                 ← Previous
@@ -127,7 +140,7 @@ export default async function Home({
             </span>
             {offset + limit < total && (
               <a
-                href={`/?borough=${borough}&search=${search}&page=${page + 1}`}
+                href={`/?borough=${borough}&search=${search}&cuisine=${cuisine}&page=${page + 1}`}
                 className="px-4 py-2 bg-zinc-800 rounded hover:bg-zinc-700 text-sm"
               >
                 Next →

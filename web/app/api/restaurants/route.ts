@@ -7,6 +7,7 @@ export async function GET(request: NextRequest) {
   const filters = {
     borough: searchParams.get("borough") || undefined,
     neighborhood: searchParams.get("neighborhood") || undefined,
+    cuisine: searchParams.get("cuisine") || undefined,
     search: searchParams.get("search") || undefined,
     limit: searchParams.get("limit") ? parseInt(searchParams.get("limit")!) : 50,
     offset: searchParams.get("offset") ? parseInt(searchParams.get("offset")!) : 0,
