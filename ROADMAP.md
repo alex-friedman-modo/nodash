@@ -13,8 +13,8 @@
 
 ## 🏗️ IN PROGRESS
 
-- [ ] Opus agent cleaning broken `online_order_url` entries (TOS pages, dead links)
-- [ ] Monitoring Railway deploy — latest push fixing server component crash
+- [ ] Neighborhood name mapping (Park Slope → Northwest Brooklyn) for better search
+- [ ] Getting Railway deploy stable with latest code
 
 ## 📋 TODO — Engineering
 
