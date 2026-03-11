@@ -1,6 +1,8 @@
+"use client";
+
 import Link from "next/link";
 import { Phone, ExternalLink } from "lucide-react";
-import { Restaurant, formatCuisine, formatOrderingMethod } from "@/lib/db";
+import { type Restaurant, formatCuisine, formatOrderingMethod } from "@/lib/formatters";
 
 export default function RestaurantCard({ r }: { r: Restaurant }) {
   const cuisine = formatCuisine(r.primary_type);

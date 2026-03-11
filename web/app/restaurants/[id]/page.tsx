@@ -1,4 +1,5 @@
-import { getRestaurant, formatCuisine, formatOrderingMethod, formatPriceLevel } from "@/lib/db";
+import { getRestaurant } from "@/lib/db";
+import { formatCuisine, formatOrderingMethod, formatPriceLevel } from "@/lib/formatters";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { Phone, Globe, MapPin, ArrowLeft, ExternalLink, Clock } from "lucide-react";
