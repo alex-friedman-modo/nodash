@@ -1,13 +1,17 @@
 #!/bin/bash
 # Download the restaurant DB to the persistent volume if it doesn't exist
 DB_PATH="${DB_PATH:-/data/restaurants.db}"
+DB_VERSION="v0.1.1"
+VERSION_FILE="$(dirname "$DB_PATH")/.db-version"
 
-if [ ! -f "$DB_PATH" ]; then
+# Download if missing or version mismatch
+if [ ! -f "$DB_PATH" ] || [ "$(cat "$VERSION_FILE" 2>/dev/null)" != "$DB_VERSION" ]; then
   echo "Database not found at $DB_PATH — downloading from GitHub release..."
   mkdir -p "$(dirname "$DB_PATH")"
   curl -L -o "$DB_PATH" \
-    "https://github.com/alex-friedman-modo/nodash/releases/download/v0.1.0/restaurants.db"
-  echo "Database downloaded ($(du -h "$DB_PATH" | cut -f1))"
+    "https://github.com/alex-friedman-modo/nodash/releases/download/v0.1.1/restaurants.db"
+  echo "$DB_VERSION" > "$VERSION_FILE"
+  echo "Database downloaded ($(du -h "$DB_PATH" | cut -f1)) — $DB_VERSION"
 else
   echo "Database exists at $DB_PATH ($(du -h "$DB_PATH" | cut -f1))"
 fi
