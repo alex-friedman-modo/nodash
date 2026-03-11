@@ -9,117 +9,92 @@ export default function RestaurantCard({ r }: { r: Restaurant }) {
   const method = formatOrderingMethod(r.ordering_method, r.detected_platform);
   const description = r.editorial_summary || r.generative_summary || null;
   const truncatedDesc = description
-    ? description.length > 80
-      ? description.slice(0, 80).trimEnd() + "…"
+    ? description.length > 70
+      ? description.slice(0, 70).trimEnd() + "…"
       : description
     : null;
 
-  const feeDisplay = r.delivery_fee
-    ? r.delivery_fee.toLowerCase() === "free"
-      ? "Free delivery"
-      : `${r.delivery_fee} delivery`
-    : null;
-
-  const minDisplay = r.delivery_minimum ? `${r.delivery_minimum} min` : null;
-
   return (
-    <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-4 hover:border-green-500/50 transition-all group">
-      <div className="flex items-start gap-3">
-        {/* Photo */}
+    <div className="bg-zinc-900/50 border border-zinc-800/50 rounded-xl hover:border-zinc-700 transition-all group">
+      <div className="flex">
+        {/* Photo — left side on mobile */}
         {r.photo_url && (
           <Link
             href={`/restaurants/${encodeURIComponent(r.place_id)}`}
-            className="flex-shrink-0 w-16 h-16 md:w-20 md:h-20 rounded-lg overflow-hidden bg-zinc-800"
+            className="flex-shrink-0 w-24 h-full min-h-[100px] md:w-28 rounded-l-xl overflow-hidden bg-zinc-800"
           >
             <img
               src={r.photo_url}
-              alt={r.name}
+              alt=""
               className="w-full h-full object-cover"
               loading="lazy"
             />
           </Link>
         )}
-        <div className="flex items-start justify-between gap-3 min-w-0 flex-1">
-        <Link
-          href={`/restaurants/${encodeURIComponent(r.place_id)}`}
-          className="min-w-0 flex-1"
-        >
-          <h3 className="font-semibold text-white text-lg leading-tight group-hover:text-green-400 transition-colors truncate">
-            {r.name}
-          </h3>
-          <div className="flex items-center gap-2 mt-1 flex-wrap">
-            <span className="text-sm text-zinc-400">{r.neighborhood}</span>
-            <span className="text-zinc-600">·</span>
-            <span className="text-sm text-zinc-500">{cuisine}</span>
-            {r.rating && (
-              <>
-                <span className="text-zinc-600">·</span>
-                <span className="text-sm text-zinc-500">
-                  ⭐ {r.rating}
-                  {r.review_count ? ` (${r.review_count.toLocaleString()})` : ""}
+
+        {/* Content */}
+        <div className="flex-1 min-w-0 p-3">
+          <Link href={`/restaurants/${encodeURIComponent(r.place_id)}`} className="block">
+            <div className="flex items-start justify-between gap-2">
+              <h3 className="font-semibold text-white leading-tight group-hover:text-green-400 transition-colors line-clamp-1">
+                {r.name}
+              </h3>
+              {r.review_count && r.review_count >= 500 && (
+                <span className="flex-shrink-0 text-xs bg-orange-500/15 text-orange-400 px-1.5 py-0.5 rounded-full">
+                  🔥
                 </span>
-              </>
+              )}
+            </div>
+            <div className="flex items-center gap-1.5 mt-0.5 text-xs text-zinc-500">
+              <span>{cuisine}</span>
+              <span>·</span>
+              <span>{r.neighborhood}</span>
+              {r.rating && (
+                <>
+                  <span>·</span>
+                  <span className="text-zinc-400">⭐ {r.rating}</span>
+                </>
+              )}
+            </div>
+            {truncatedDesc && (
+              <p className="text-xs text-zinc-500 mt-1 line-clamp-1">{truncatedDesc}</p>
             )}
-            {r.review_count && r.review_count >= 500 && (
-              <>
-                <span className="text-zinc-600">·</span>
-                <span className="text-xs bg-orange-500/20 text-orange-400 px-2 py-0.5 rounded-full">
-                  🔥 Popular
-                </span>
-              </>
+          </Link>
+
+          {/* CTAs — bottom of card */}
+          <div className="flex items-center gap-2 mt-2">
+            {r.online_order_url ? (
+              <a
+                href={r.online_order_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                className="inline-flex items-center gap-1 bg-green-600 hover:bg-green-500 text-white text-xs font-medium rounded-lg px-3 py-1.5 transition-colors"
+              >
+                <ExternalLink className="w-3 h-3" />
+                Order Online
+              </a>
+            ) : (
+              <span className="text-xs text-zinc-600 bg-zinc-800/50 px-2 py-1 rounded-lg">
+                {method}
+              </span>
+            )}
+            {r.phone && (
+              <a
+                href={`tel:${r.phone}`}
+                onClick={(e) => e.stopPropagation()}
+                className="inline-flex items-center gap-1 text-zinc-400 hover:text-white text-xs transition-colors"
+              >
+                <Phone className="w-3 h-3" />
+                <span className="hidden sm:inline">{r.phone}</span>
+                <span className="sm:hidden">Call</span>
+              </a>
+            )}
+            {r.delivery_fee && r.delivery_fee.toLowerCase() === "free" && (
+              <span className="text-xs text-green-400/70">Free delivery</span>
             )}
           </div>
-          {truncatedDesc && (
-            <p className="text-sm text-zinc-400 mt-1 truncate">{truncatedDesc}</p>
-          )}
-        </Link>
-        <span className="flex-shrink-0 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-500/10 text-green-400 border border-green-500/20">
-          Direct ✓
-        </span>
         </div>
-      </div>
-
-      {/* Delivery info tags */}
-      <div className="flex flex-wrap items-center gap-2 mt-3">
-        {feeDisplay && (
-          <span className="text-sm text-zinc-300 bg-zinc-800 px-2 py-0.5 rounded">
-            {feeDisplay}
-          </span>
-        )}
-        {minDisplay && (
-          <span className="text-sm text-zinc-300 bg-zinc-800 px-2 py-0.5 rounded">
-            {minDisplay}
-          </span>
-        )}
-        <span className="text-sm text-zinc-400 bg-zinc-800 px-2 py-0.5 rounded">
-          {method}
-        </span>
-      </div>
-
-      {/* Action buttons */}
-      <div className="flex items-center gap-2 mt-3">
-        {r.online_order_url && (
-          <a
-            href={r.online_order_url}
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={(e) => e.stopPropagation()}
-            className="inline-flex items-center gap-1.5 bg-green-600 hover:bg-green-500 text-white text-sm font-medium rounded-md px-3 py-1.5 transition-colors"
-          >
-            <ExternalLink className="w-3.5 h-3.5" />
-            Order Online
-          </a>
-        )}
-        {r.phone && (
-          <a
-            href={`tel:${r.phone}`}
-            onClick={(e) => e.stopPropagation()}
-            className="inline-flex items-center gap-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-sm rounded-md px-3 py-1.5 transition-colors"
-          >
-            <Phone className="w-3.5 h-3.5" />
-            {r.phone}
-          </a>
-        )}
       </div>
     </div>
   );
