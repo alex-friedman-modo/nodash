@@ -16,7 +16,7 @@ export default async function Home({
   const search = params.search || "";
   const cuisine = params.cuisine || "";
   const page = parseInt(params.page || "1");
-  const limit = 50;
+  const limit = 30;
   const offset = (page - 1) * limit;
 
   let restaurants: Awaited<ReturnType<typeof getRestaurants>>["restaurants"] = [];
@@ -42,40 +42,41 @@ export default async function Home({
     console.error("DB error on homepage:", e);
   }
 
+  const isFiltering = search || borough !== "All" || cuisine;
+  const totalPages = Math.ceil(total / limit);
+
   return (
     <main className="min-h-screen bg-zinc-950 text-white">
       {/* Nav */}
       <nav className="border-b border-zinc-800 px-4 py-3">
         <div className="max-w-5xl mx-auto flex items-center justify-between">
-          <span className="font-bold text-lg">nodash</span>
+          <a href="/" className="font-bold text-lg tracking-tight">
+            nodash<span className="text-green-400">.</span>
+          </a>
           <div className="flex items-center gap-4">
-            <a href="/feedback" className="text-sm text-zinc-400 hover:text-white">Feedback</a>
-            <a href="/about" className="text-sm text-zinc-400 hover:text-white">About</a>
+            <a href="/feedback" className="text-sm text-zinc-400 hover:text-white transition-colors">Feedback</a>
+            <a href="/about" className="text-sm text-zinc-400 hover:text-white transition-colors">About</a>
           </div>
         </div>
       </nav>
 
-      {/* Hero */}
-      <section className="border-b border-zinc-800 bg-zinc-950">
-        <div className="max-w-5xl mx-auto px-4 py-10 md:py-14">
-          <h1 className="text-4xl md:text-6xl font-bold tracking-tight">
-            Order direct.
-            <br />
-            <span className="text-green-400">Skip the cut.</span>
+      {/* Hero — compact, action-oriented */}
+      <section className="bg-zinc-950 border-b border-zinc-800">
+        <div className="max-w-5xl mx-auto px-4 pt-8 pb-6 md:pt-12 md:pb-8">
+          <h1 className="text-3xl md:text-5xl font-bold tracking-tight leading-tight">
+            NYC restaurants that deliver
+            <span className="text-green-400"> without the apps.</span>
           </h1>
-          <p className="mt-4 text-lg md:text-xl text-zinc-400 max-w-2xl">
-            {totalDirect.toLocaleString()} NYC restaurants that deliver without the apps.
-            Your money goes to the restaurant, not a middleman.
-          </p>
-          <p className="mt-6 text-sm text-zinc-500">
-            Search your neighborhood, zip code, or restaurant name below 👇
+          <p className="mt-3 text-zinc-400 max-w-xl">
+            {totalDirect.toLocaleString()} verified restaurants. No DoorDash fees. No middleman.
+            Search your zip code or neighborhood and order direct.
           </p>
         </div>
       </section>
 
-      {/* Search + Filters */}
+      {/* Search + Filters — sticky */}
       <section className="sticky top-0 z-10 bg-zinc-950/95 backdrop-blur border-b border-zinc-800">
-        <div className="max-w-5xl mx-auto px-4 py-4">
+        <div className="max-w-5xl mx-auto px-4 py-3">
           <div className="flex gap-2">
             <div className="flex-1">
               <SearchBar initialSearch={search} />
@@ -91,44 +92,55 @@ export default async function Home({
       </section>
 
       {/* Restaurant List */}
-      <section className="max-w-5xl mx-auto px-4 py-6">
-        <p className="text-sm text-zinc-500 mb-4">
-          {total.toLocaleString()} restaurant{total !== 1 ? "s" : ""}
-          {borough !== "All" ? ` in ${borough}` : ""}
-          {search ? ` matching "${search}"` : ""}
-        </p>
+      <section className="max-w-5xl mx-auto px-4 py-4">
+        <div className="flex items-center justify-between mb-3">
+          <p className="text-sm text-zinc-500">
+            {total.toLocaleString()} restaurant{total !== 1 ? "s" : ""}
+            {borough !== "All" ? ` in ${borough}` : ""}
+            {search ? ` matching "${search}"` : ""}
+            {cuisine ? ` · ${cuisinesList.find(c => c.cuisine === cuisine)?.label || cuisine}` : ""}
+          </p>
+          {isFiltering && (
+            <a href="/" className="text-xs text-green-400 hover:underline">
+              Clear filters
+            </a>
+          )}
+        </div>
 
-        <div className="grid gap-3">
+        <div className="grid gap-2">
           {restaurants.map((r) => (
             <RestaurantCard key={r.place_id} r={r} />
           ))}
         </div>
 
         {restaurants.length === 0 && (
-          <div className="text-center py-16 text-zinc-500">
-            <p className="text-lg">No restaurants found</p>
-            <p className="text-sm mt-2">Try a different search or borough</p>
+          <div className="text-center py-16">
+            <p className="text-xl text-zinc-400">No restaurants found</p>
+            <p className="text-sm text-zinc-500 mt-2">
+              Try a different zip code, neighborhood name, or{" "}
+              <a href="/" className="text-green-400 hover:underline">clear all filters</a>
+            </p>
           </div>
         )}
 
         {/* Pagination */}
-        {total > limit && (
-          <div className="flex justify-center gap-4 mt-8">
+        {totalPages > 1 && (
+          <div className="flex justify-center gap-4 mt-6 mb-4">
             {page > 1 && (
               <a
                 href={`/?borough=${borough}&search=${search}&cuisine=${cuisine}&page=${page - 1}`}
-                className="px-4 py-2 bg-zinc-800 rounded hover:bg-zinc-700 text-sm"
+                className="px-4 py-2 bg-zinc-800 rounded-lg hover:bg-zinc-700 text-sm transition-colors"
               >
                 ← Previous
               </a>
             )}
             <span className="px-4 py-2 text-sm text-zinc-500">
-              Page {page} of {Math.ceil(total / limit)}
+              {page} / {totalPages}
             </span>
-            {offset + limit < total && (
+            {page < totalPages && (
               <a
                 href={`/?borough=${borough}&search=${search}&cuisine=${cuisine}&page=${page + 1}`}
-                className="px-4 py-2 bg-zinc-800 rounded hover:bg-zinc-700 text-sm"
+                className="px-4 py-2 bg-zinc-800 rounded-lg hover:bg-zinc-700 text-sm transition-colors"
               >
                 Next →
               </a>
@@ -137,31 +149,34 @@ export default async function Home({
         )}
       </section>
 
-      {/* Why nodash — only show when no search active */}
-      {!search && borough === "All" && !cuisine && (
-        <section className="border-t border-zinc-800 mt-8">
+      {/* Why nodash — only on default view */}
+      {!isFiltering && page === 1 && (
+        <section className="border-t border-zinc-800">
           <div className="max-w-5xl mx-auto px-4 py-12">
-            <h2 className="text-2xl font-bold mb-6">Why nodash?</h2>
-            <div className="grid md:grid-cols-3 gap-6">
+            <h2 className="text-xl font-bold mb-6">Why order direct?</h2>
+            <div className="grid md:grid-cols-3 gap-4">
               <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-5">
-                <p className="font-semibold text-green-400 mb-2">💰 Your money gets there</p>
+                <p className="text-2xl mb-2">💰</p>
+                <p className="font-semibold text-white mb-1">Restaurant keeps 100%</p>
                 <p className="text-zinc-400 text-sm">
-                  Delivery apps take 15–30% per order. When you order direct, the restaurant
-                  keeps what you paid.
+                  Apps take 15–30% per order. When you call direct, every dollar goes to the people
+                  making your food.
                 </p>
               </div>
               <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-5">
-                <p className="font-semibold text-green-400 mb-2">📱 No app needed</p>
+                <p className="text-2xl mb-2">📞</p>
+                <p className="font-semibold text-white mb-1">One call, done</p>
                 <p className="text-zinc-400 text-sm">
-                  Search your neighborhood. See the fee. Call or click. That&apos;s it.
-                  It&apos;s a directory, not a platform.
+                  No sign-ups, no tracking your data, no surge pricing. Just a phone number
+                  and a menu.
                 </p>
               </div>
               <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-5">
-                <p className="font-semibold text-green-400 mb-2">✅ Every listing verified</p>
+                <p className="text-2xl mb-2">🏘️</p>
+                <p className="font-semibold text-white mb-1">Keep your block alive</p>
                 <p className="text-zinc-400 text-sm">
-                  We checked every restaurant. Confirmed direct delivery — by phone, website,
-                  Toast, Slice, or however they do it.
+                  That Thai place on the corner? They&apos;re paying 30% to DoorDash to compete with chains.
+                  You can fix that with a phone call.
                 </p>
               </div>
             </div>
@@ -170,14 +185,20 @@ export default async function Home({
       )}
 
       {/* Footer */}
-      <footer className="border-t border-zinc-800 py-8">
+      <footer className="border-t border-zinc-800 py-6">
         <div className="max-w-5xl mx-auto px-4 text-center text-zinc-500 text-sm">
-          <p className="font-semibold text-zinc-400">nodash</p>
-          <p className="mt-1">Order direct. Skip the cut.</p>
-          <p className="mt-4">
-            Run a restaurant?{" "}
-            <a href="mailto:afriedman1997@gmail.com" className="text-green-400 hover:underline">
-              Get listed for free
+          <p>
+            <span className="font-semibold text-zinc-400">nodash</span>
+            <span className="text-green-400">.</span>
+            {" "}Order direct. Skip the cut.
+          </p>
+          <p className="mt-2">
+            <a href="/about" className="hover:text-zinc-300">About</a>
+            {" · "}
+            <a href="/feedback" className="hover:text-zinc-300">Feedback</a>
+            {" · "}
+            <a href="mailto:afriedman1997@gmail.com" className="hover:text-zinc-300">
+              List your restaurant (free)
             </a>
           </p>
         </div>

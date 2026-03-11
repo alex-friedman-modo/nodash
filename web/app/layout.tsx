@@ -30,6 +30,7 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <head>
+        <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
         <link rel="manifest" href="/manifest.json" />
         <meta name="theme-color" content="#0a0a0a" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
