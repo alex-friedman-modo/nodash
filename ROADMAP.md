@@ -14,14 +14,14 @@
 
 ## 🏗️ IN PROGRESS
 
-_(nothing right now)_
+_(nothing right now — waiting on domain/hosting from Alex)_
 
 ## 📋 TODO — Engineering
 
 ### Launch Blockers
 - [ ] Set up nginx reverse proxy + pm2 for production serving
 - [ ] SSL cert (Let's Encrypt / certbot)
-- [ ] Fix `price_level` display (shows `PRICE_LEVEL_MODERATE` instead of `$$`)
+- [x] Fix `price_level` display (shows `PRICE_LEVEL_MODERATE` instead of `$$`) ✅
 - [ ] Fix `online_order_url` — some are broken links (e.g. Slice TOS page instead of restaurant)
 - [ ] Add favicon + OG image
 - [ ] Mobile test pass — make sure phone tap-to-call works
@@ -29,10 +29,10 @@ _(nothing right now)_
 ### Post-Launch Engineering
 - [ ] Neighborhood pages (`/brooklyn/park-slope`, `/queens/astoria`, etc.)
 - [ ] Borough landing pages with SEO meta from launch plan
-- [ ] About page with copy from `docs/launch-plan.md`
+- [x] About page with copy from `docs/launch-plan.md` ✅
 - [ ] "Suggest a restaurant" form (simple mailto or Google Form)
-- [ ] Sitemap.xml generation for SEO
-- [ ] robots.txt
+- [x] Sitemap.xml generation for SEO ✅
+- [x] robots.txt ✅
 - [ ] Structured data (JSON-LD for local business listings)
 - [ ] Search improvements: debounced live search, fuzzy matching
 - [ ] Filter by cuisine type
@@ -41,7 +41,7 @@ _(nothing right now)_
 ### Data Quality
 - [ ] Clean up 528 `extracted_llm_uncertain` restaurants — show with "unverified" badge or hide?
 - [ ] Fix broken `online_order_url` entries (some point to platform TOS/homepage instead of restaurant)
-- [ ] Playwright scraper for 148 SPA sites (React/Vue/Next that returned no content)
+- [x] Playwright scraper for SPA sites — 50 new direct delivery found ✅
 - [ ] Re-scrape `http_404` restaurants with bare domain (strip UTM/paths)
 - [ ] Verify borough counts match actual data (launch plan has placeholder numbers)
 
@@ -68,11 +68,11 @@ _(nothing right now)_
 ## 📊 KEY METRICS
 
 - **Total restaurants in DB:** 7,060
-- **Confirmed direct delivery:** 3,017 (43%)
+- **Confirmed direct delivery:** 3,067 (43%)
 - **Call needed:** 1,572
 - **No website (need calls):** 1,559
 - **Uncertain (LLM medium):** 528
-- **Fetch failed:** 413
+- **Fetch failed:** 305
 
 ## 🧠 DECISIONS LOG
 
