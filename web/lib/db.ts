@@ -2,6 +2,7 @@ import Database from "better-sqlite3";
 import path from "path";
 import { formatCuisine } from "./formatters";
 import type { Restaurant } from "./formatters";
+import { NEIGHBORHOOD_ALIASES } from "./neighborhoods";
 export type { Restaurant };
 export { formatCuisine, formatOrderingMethod, formatPriceLevel } from "./formatters";
 
@@ -52,13 +53,25 @@ export function getRestaurants(filters: RestaurantFilters = {}): {
   }
 
   if (filters.cuisine) {
-    conditions.push("primary_type = ?");
+    conditions.push("cuisine_label = ?");
     params.push(filters.cuisine);
   }
 
   if (filters.search) {
-    conditions.push("(name LIKE ? OR neighborhood LIKE ? OR address LIKE ? OR zip_code = ?)");
-    params.push(`%${filters.search}%`, `%${filters.search}%`, `%${filters.search}%`, filters.search);
+    const searchLower = filters.search.toLowerCase().trim();
+
+    // Check if this matches a neighborhood alias
+    const aliasDistricts = NEIGHBORHOOD_ALIASES[searchLower];
+    if (aliasDistricts && aliasDistricts.length > 0) {
+      const placeholders = aliasDistricts.map(() => "?").join(", ");
+      conditions.push(
+        `(neighborhood IN (${placeholders}) OR name LIKE ? OR address LIKE ? OR zip_code = ?)`
+      );
+      params.push(...aliasDistricts, `%${filters.search}%`, `%${filters.search}%`, filters.search);
+    } else {
+      conditions.push("(name LIKE ? OR neighborhood LIKE ? OR address LIKE ? OR zip_code = ?)");
+      params.push(`%${filters.search}%`, `%${filters.search}%`, `%${filters.search}%`, filters.search);
+    }
   }
 
   const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
@@ -140,16 +153,16 @@ export function getCuisineCounts(): { cuisine: string; label: string; count: num
   const db = getDb();
   const rows = db
     .prepare(
-      `SELECT primary_type, COUNT(*) as count FROM restaurants
-       WHERE direct_delivery = 1 AND primary_type IS NOT NULL
-       GROUP BY primary_type HAVING count >= 20
+      `SELECT cuisine_label, COUNT(*) as count FROM restaurants
+       WHERE direct_delivery = 1 AND cuisine_label IS NOT NULL
+       GROUP BY cuisine_label
        ORDER BY count DESC
-       LIMIT 15`
+       LIMIT 12`
     )
-    .all() as { primary_type: string; count: number }[];
+    .all() as { cuisine_label: string; count: number }[];
   return rows.map((r) => ({
-    cuisine: r.primary_type,
-    label: formatCuisine(r.primary_type),
+    cuisine: r.cuisine_label,
+    label: r.cuisine_label,
     count: r.count,
   }));
 }
