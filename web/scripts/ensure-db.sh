@@ -12,5 +12,9 @@ else
   echo "Database exists at $DB_PATH ($(du -h "$DB_PATH" | cut -f1))"
 fi
 
+# Copy static assets to standalone directory (Next.js standalone doesn't include them)
+cp -r .next/static .next/standalone/.next/static 2>/dev/null || true
+cp -r public .next/standalone/public 2>/dev/null || true
+
 # Start the Next.js server
 exec node .next/standalone/server.js
