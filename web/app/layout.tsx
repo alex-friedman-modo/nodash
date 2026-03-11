@@ -2,13 +2,23 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "nodash — NYC restaurants that deliver direct",
+  title: "nodash — NYC Restaurants That Deliver Direct | No Apps, No 30% Cut",
   description:
-    "Directory of 3,017 NYC restaurants that do direct delivery. No DoorDash, no UberEats, no middlemen. Order direct. Skip the cut.",
+    "Find NYC restaurants that deliver without DoorDash, Uber Eats, or Grubhub. 3,000+ restaurants across all 5 boroughs. See delivery fees, minimums, and how to order direct. Free to use.",
+  keywords: [
+    "NYC restaurant delivery",
+    "direct delivery NYC",
+    "no DoorDash",
+    "order direct restaurants",
+    "NYC food delivery no app",
+    "Brooklyn restaurant delivery",
+    "Manhattan restaurant delivery",
+  ],
   openGraph: {
-    title: "nodash — Order direct. Skip the cut.",
+    title: "nodash — Order Direct. Skip the Cut.",
     description:
-      "3,017 NYC restaurants that deliver without the middleman. All 5 boroughs.",
+      "3,000+ NYC restaurants that deliver without delivery apps. Your money goes to the restaurant.",
+    type: "website",
   },
 };
 
@@ -19,9 +29,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="dark">
-      <body className="min-h-screen bg-[#0a0a0a] text-white antialiased">
-        {children}
-      </body>
+      <body className="antialiased">{children}</body>
     </html>
   );
 }

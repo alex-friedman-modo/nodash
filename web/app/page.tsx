@@ -1,171 +1,148 @@
-"use client";
+import { getRestaurants, getBoroughCounts, getTotalDirectDelivery } from "@/lib/db";
+import RestaurantCard from "@/components/RestaurantCard";
+import SearchBar from "@/components/SearchBar";
+import BoroughTabs from "@/components/BoroughTabs";
 
-import { useState, useMemo } from "react";
-import { Search, Zap, DollarSign, MapPin } from "lucide-react";
-import { RestaurantCard } from "@/components/restaurant-card";
-import { mockRestaurants } from "@/lib/mock-data";
-import { Borough, BOROUGHS } from "@/lib/types";
+export const dynamic = "force-dynamic";
 
-export default function Home() {
-  const [search, setSearch] = useState("");
-  const [borough, setBorough] = useState<Borough>("All");
+export default async function Home({
+  searchParams,
+}: {
+  searchParams: Promise<{ borough?: string; search?: string; page?: string }>;
+}) {
+  const params = await searchParams;
+  const borough = params.borough || "All";
+  const search = params.search || "";
+  const page = parseInt(params.page || "1");
+  const limit = 50;
+  const offset = (page - 1) * limit;
 
-  const filtered = useMemo(() => {
-    const q = search.toLowerCase();
-    return mockRestaurants.filter((r) => {
-      if (borough !== "All" && r.borough !== borough) return false;
-      if (q) {
-        return (
-          r.name.toLowerCase().includes(q) ||
-          (r.neighborhood?.toLowerCase().includes(q) ?? false) ||
-          (r.short_address?.toLowerCase().includes(q) ?? false)
-        );
-      }
-      return true;
-    });
-  }, [search, borough]);
+  const { restaurants, total } = getRestaurants({
+    borough: borough === "All" ? undefined : borough,
+    search: search || undefined,
+    limit,
+    offset,
+  });
+
+  const boroughCounts = getBoroughCounts();
+  const totalDirect = getTotalDirectDelivery();
 
   return (
-    <div className="min-h-screen">
-      {/* Header */}
-      <header className="border-b border-white/10 px-4 py-4">
-        <div className="mx-auto flex max-w-5xl items-center justify-between">
-          <h1 className="text-xl font-black tracking-tight">
-            no<span className="text-green-500">dash</span>
-          </h1>
-          <a
-            href="mailto:hello@nodash.nyc?subject=Feedback"
-            className="text-sm text-zinc-500 hover:text-white transition-colors"
-          >
-            Feedback
-          </a>
-        </div>
-      </header>
-
+    <main className="min-h-screen bg-zinc-950 text-white">
       {/* Hero */}
-      <section className="px-4 pt-16 pb-12">
-        <div className="mx-auto max-w-5xl">
-          <h2 className="text-4xl font-black tracking-tight sm:text-5xl lg:text-6xl">
+      <section className="border-b border-zinc-800 bg-zinc-950">
+        <div className="max-w-5xl mx-auto px-4 py-16 md:py-24">
+          <h1 className="text-4xl md:text-6xl font-bold tracking-tight">
             Order direct.
             <br />
-            <span className="text-green-500">Skip the cut.</span>
-          </h2>
-          <p className="mt-4 max-w-lg text-lg text-zinc-400">
-            NYC restaurants that deliver without the middleman. No DoorDash fees.
-            No UberEats markup. Just you and the restaurant.
+            <span className="text-green-400">Skip the cut.</span>
+          </h1>
+          <p className="mt-4 text-lg md:text-xl text-zinc-400 max-w-2xl">
+            {totalDirect.toLocaleString()} NYC restaurants that deliver without DoorDash, Uber Eats,
+            or Grubhub. Your money goes to the restaurant, not a middleman.
           </p>
-        </div>
-      </section>
-
-      {/* Stats */}
-      <section className="border-y border-white/10 px-4 py-5">
-        <div className="mx-auto flex max-w-5xl flex-wrap gap-8 text-sm">
-          <div className="flex items-center gap-2">
-            <Zap className="h-4 w-4 text-green-500" />
-            <span className="font-semibold text-white">3,017</span>
-            <span className="text-zinc-500">restaurants verified</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <DollarSign className="h-4 w-4 text-green-500" />
-            <span className="text-zinc-500">No DoorDash fees</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <MapPin className="h-4 w-4 text-green-500" />
-            <span className="text-zinc-500">All 5 boroughs</span>
+          <div className="flex flex-wrap gap-6 mt-8 text-sm text-zinc-500">
+            <div>
+              <span className="text-2xl font-bold text-white block">
+                {totalDirect.toLocaleString()}
+              </span>
+              restaurants verified
+            </div>
+            <div>
+              <span className="text-2xl font-bold text-white block">$0</span>
+              platform fees
+            </div>
+            <div>
+              <span className="text-2xl font-bold text-white block">5</span>
+              boroughs covered
+            </div>
           </div>
         </div>
       </section>
 
       {/* Search + Filters */}
-      <section className="px-4 pt-8 pb-4">
-        <div className="mx-auto max-w-5xl">
-          {/* Search */}
-          <div className="relative">
-            <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-zinc-500" />
-            <input
-              type="text"
-              placeholder="Search by name or neighborhood..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full rounded-xl border border-white/10 bg-white/[0.05] py-3.5 pl-12 pr-4 text-white placeholder:text-zinc-600 focus:border-green-500/50 focus:outline-none focus:ring-1 focus:ring-green-500/50 transition-colors"
-            />
-          </div>
-
-          {/* Borough tabs */}
-          <div className="mt-4 flex gap-2 overflow-x-auto pb-2 scrollbar-none">
-            {BOROUGHS.map((b) => (
-              <button
-                key={b}
-                onClick={() => setBorough(b)}
-                className={`shrink-0 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
-                  borough === b
-                    ? "bg-green-500 text-black"
-                    : "bg-white/[0.05] text-zinc-400 hover:bg-white/10 hover:text-white"
-                }`}
-              >
-                {b}
-              </button>
-            ))}
-          </div>
+      <section className="sticky top-0 z-10 bg-zinc-950/95 backdrop-blur border-b border-zinc-800">
+        <div className="max-w-5xl mx-auto px-4 py-4">
+          <SearchBar initialSearch={search} />
+          <BoroughTabs
+            activeBoroughs={borough}
+            boroughCounts={boroughCounts}
+            totalCount={totalDirect}
+          />
         </div>
       </section>
 
       {/* Restaurant List */}
-      <section className="px-4 pb-12">
-        <div className="mx-auto max-w-5xl">
-          <p className="mb-4 text-sm text-zinc-500">
-            {filtered.length} restaurant{filtered.length !== 1 ? "s" : ""}
-            {borough !== "All" ? ` in ${borough}` : ""}
-            {search ? ` matching "${search}"` : ""}
-          </p>
+      <section className="max-w-5xl mx-auto px-4 py-6">
+        <p className="text-sm text-zinc-500 mb-4">
+          {total.toLocaleString()} restaurant{total !== 1 ? "s" : ""}
+          {borough !== "All" ? ` in ${borough}` : ""}
+          {search ? ` matching "${search}"` : ""}
+        </p>
 
-          {filtered.length > 0 ? (
-            <div className="grid gap-3 sm:grid-cols-2">
-              {filtered.map((r) => (
-                <RestaurantCard key={r.place_id} restaurant={r} />
-              ))}
-            </div>
-          ) : (
-            <div className="rounded-xl border border-white/10 py-16 text-center">
-              <p className="text-zinc-500">No restaurants found.</p>
-              <p className="mt-1 text-sm text-zinc-600">
-                Try a different search or borough.
-              </p>
-            </div>
-          )}
+        <div className="grid gap-3">
+          {restaurants.map((r) => (
+            <RestaurantCard key={r.place_id} r={r} />
+          ))}
         </div>
+
+        {restaurants.length === 0 && (
+          <div className="text-center py-16 text-zinc-500">
+            <p className="text-lg">No restaurants found</p>
+            <p className="text-sm mt-2">Try a different search or borough</p>
+          </div>
+        )}
+
+        {/* Pagination */}
+        {total > limit && (
+          <div className="flex justify-center gap-4 mt-8">
+            {page > 1 && (
+              <a
+                href={`/?borough=${borough}&search=${search}&page=${page - 1}`}
+                className="px-4 py-2 bg-zinc-800 rounded hover:bg-zinc-700 text-sm"
+              >
+                ← Previous
+              </a>
+            )}
+            <span className="px-4 py-2 text-sm text-zinc-500">
+              Page {page} of {Math.ceil(total / limit)}
+            </span>
+            {offset + limit < total && (
+              <a
+                href={`/?borough=${borough}&search=${search}&page=${page + 1}`}
+                className="px-4 py-2 bg-zinc-800 rounded hover:bg-zinc-700 text-sm"
+              >
+                Next →
+              </a>
+            )}
+          </div>
+        )}
       </section>
 
-      {/* Why nodash? */}
-      <section className="border-t border-white/10 px-4 py-16">
-        <div className="mx-auto max-w-5xl">
-          <h3 className="text-2xl font-black">Why nodash?</h3>
-          <div className="mt-6 grid gap-6 sm:grid-cols-3">
+      {/* Why nodash */}
+      <section className="border-t border-zinc-800 mt-8">
+        <div className="max-w-5xl mx-auto px-4 py-16">
+          <h2 className="text-2xl font-bold mb-8">Why nodash?</h2>
+          <div className="grid md:grid-cols-3 gap-8">
             <div>
-              <div className="text-green-500 font-bold text-lg">
-                Apps take 15-30%
-              </div>
-              <p className="mt-1 text-sm text-zinc-400">
-                DoorDash, UberEats, and Grubhub charge restaurants up to 30% per
-                order. That money comes out of their pocket&mdash;or yours.
+              <h3 className="font-semibold text-green-400 mb-2">Your money actually gets there</h3>
+              <p className="text-zinc-400 text-sm">
+                Delivery apps take 15–30% of every order. When you order direct, the restaurant
+                keeps what you paid them.
               </p>
             </div>
             <div>
-              <div className="text-green-500 font-bold text-lg">
-                Direct = cheaper
-              </div>
-              <p className="mt-1 text-sm text-zinc-400">
-                Many restaurants offer lower prices, free delivery, or better
-                deals when you order direct. You skip the service fees too.
+              <h3 className="font-semibold text-green-400 mb-2">No app. No account. No algorithm.</h3>
+              <p className="text-zinc-400 text-sm">
+                Search by neighborhood. See the delivery fee, the minimum, the phone number.
+                That&apos;s it. It&apos;s a directory, not a platform.
               </p>
             </div>
             <div>
-              <div className="text-green-500 font-bold text-lg">
-                Support your spot
-              </div>
-              <p className="mt-1 text-sm text-zinc-400">
-                When you order direct, 100% of what you pay goes to the
-                restaurant. That&rsquo;s how neighborhood spots survive.
+              <h3 className="font-semibold text-green-400 mb-2">Every listing is verified</h3>
+              <p className="text-zinc-400 text-sm">
+                We checked every restaurant. Confirmed direct delivery — by phone, their own
+                website, Toast, Slice, or however they do it.
               </p>
             </div>
           </div>
@@ -173,28 +150,18 @@ export default function Home() {
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-white/10 px-4 py-8">
-        <div className="mx-auto max-w-5xl flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-zinc-600">
-          <div>
-            no<span className="text-green-500">dash</span> &middot; NYC
-            restaurant directory
-          </div>
-          <div className="flex gap-6">
-            <a
-              href="mailto:hello@nodash.nyc?subject=Add a restaurant"
-              className="hover:text-white transition-colors"
-            >
-              Add a restaurant
+      <footer className="border-t border-zinc-800 py-8">
+        <div className="max-w-5xl mx-auto px-4 text-center text-zinc-500 text-sm">
+          <p className="font-semibold text-zinc-400">nodash</p>
+          <p className="mt-1">Order direct. Skip the cut.</p>
+          <p className="mt-4">
+            Run a restaurant?{" "}
+            <a href="mailto:afriedman1997@gmail.com" className="text-green-400 hover:underline">
+              Get listed for free
             </a>
-            <a
-              href="mailto:hello@nodash.nyc"
-              className="hover:text-white transition-colors"
-            >
-              Contact
-            </a>
-          </div>
+          </p>
         </div>
       </footer>
-    </div>
+    </main>
   );
 }
