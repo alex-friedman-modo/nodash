@@ -33,6 +33,8 @@ export default async function Home({
       borough: borough === "All" ? undefined : borough,
       search: search || undefined,
       cuisine: cuisine || undefined,
+      lat,
+      lng,
       limit,
       offset,
     });
@@ -84,6 +86,7 @@ export default async function Home({
             <div className="flex-1">
               <SearchBar initialSearch={search} />
             </div>
+            <NearMeButton />
             <CuisineFilter cuisines={cuisinesList} activeCuisine={cuisine} />
           </div>
           <BoroughTabs
