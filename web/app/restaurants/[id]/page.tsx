@@ -1,4 +1,4 @@
-import { getRestaurant, formatCuisine, formatOrderingMethod } from "@/lib/db";
+import { getRestaurant, formatCuisine, formatOrderingMethod, formatPriceLevel } from "@/lib/db";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { Phone, Globe, MapPin, ArrowLeft, ExternalLink, Clock } from "lucide-react";
@@ -52,7 +52,7 @@ export default async function RestaurantPage({
             {r.review_count
               ? ` · ${r.review_count.toLocaleString()} reviews`
               : ""}
-            {r.price_level && ` · ${r.price_level}`}
+            {r.price_level && ` · ${formatPriceLevel(r.price_level)}`}
           </div>
         )}
 

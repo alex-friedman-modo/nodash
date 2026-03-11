@@ -164,6 +164,19 @@ export function formatCuisine(primaryType: string | null): string {
     .replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
+/** Format price level for display */
+export function formatPriceLevel(level: string | null): string | null {
+  if (!level) return null;
+  const map: Record<string, string> = {
+    PRICE_LEVEL_FREE: "Free",
+    PRICE_LEVEL_INEXPENSIVE: "$",
+    PRICE_LEVEL_MODERATE: "$$",
+    PRICE_LEVEL_EXPENSIVE: "$$$",
+    PRICE_LEVEL_VERY_EXPENSIVE: "$$$$",
+  };
+  return map[level] || level;
+}
+
 /** Format ordering method for display */
 export function formatOrderingMethod(method: string | null, platform: string | null): string {
   if (platform) {

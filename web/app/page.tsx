@@ -29,6 +29,14 @@ export default async function Home({
 
   return (
     <main className="min-h-screen bg-zinc-950 text-white">
+      {/* Nav */}
+      <nav className="border-b border-zinc-800 px-4 py-3">
+        <div className="max-w-5xl mx-auto flex items-center justify-between">
+          <span className="font-bold text-lg">nodash</span>
+          <a href="/about" className="text-sm text-zinc-400 hover:text-white">About</a>
+        </div>
+      </nav>
+
       {/* Hero */}
       <section className="border-b border-zinc-800 bg-zinc-950">
         <div className="max-w-5xl mx-auto px-4 py-16 md:py-24">
