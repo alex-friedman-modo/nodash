@@ -11,7 +11,11 @@ let _db: Database.Database | null = null;
 
 export function getDb(): Database.Database {
   if (!_db) {
-    _db = new Database(DB_PATH, { readonly: true });
+    try {
+      _db = new Database(DB_PATH, { readonly: true });
+    } catch (e) {
+      throw new Error(`Cannot open database at ${DB_PATH}: ${e}`);
+    }
   }
   return _db;
 }
