@@ -7,8 +7,9 @@
 ## 🔥 BLOCKED ON ALEX (flesh sack tasks)
 
 - [ ] Buy domain (`nodash.nyc` or alternative)
-- [ ] Decide hosting: VPS (this server + nginx) vs Vercel+Supabase
-- [ ] Point DNS to server IP once domain is purchased
+- [ ] Railway: create project, connect GitHub repo (root: `web/`), add volume at `/data`
+- [ ] Railway: upload `data/restaurants.db` to volume
+- [ ] Railway: add custom domain once purchased
 - [ ] Approve Twitter launch thread before posting (it's Alex's account)
 - [ ] Approve Reddit posts before posting (Alex's identity)
 
@@ -77,7 +78,7 @@ _(nothing right now — waiting on domain/hosting from Alex)_
 ## 🧠 DECISIONS LOG
 
 - **Brand:** Dark mode, "Order direct. Skip the cut.", honest/direct tone, NYC energy
-- **Hosting:** TBD — recommending VPS first, Vercel later
+- **Hosting:** Railway (Alex's preference) — Nixpacks, persistent volume for SQLite
 - **Domain:** TBD — recommending `nodash.nyc`
 - **Launch scope:** All NYC (not Park Slope first)
 - **DB:** SQLite local for now, Supabase when scaling
