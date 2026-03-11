@@ -1,21 +1,24 @@
 import { getRestaurants, getBoroughCounts, getTotalDirectDelivery, getCuisineCounts } from "@/lib/db";
-import RestaurantCard from "@/components/RestaurantCard";
 import SearchBar from "@/components/SearchBar";
 import BoroughTabs from "@/components/BoroughTabs";
 import CuisineFilter from "@/components/CuisineFilter";
+import NearMeButton from "@/components/NearMeButton";
+import RestaurantSection from "@/components/RestaurantSection";
 
 export const dynamic = "force-dynamic";
 
 export default async function Home({
   searchParams,
 }: {
-  searchParams: Promise<{ borough?: string; search?: string; cuisine?: string; page?: string }>;
+  searchParams: Promise<{ borough?: string; search?: string; cuisine?: string; page?: string; lat?: string; lng?: string }>;
 }) {
   const params = await searchParams;
   const borough = params.borough || "All";
   const search = params.search || "";
   const cuisine = params.cuisine || "";
   const page = parseInt(params.page || "1");
+  const lat = params.lat ? parseFloat(params.lat) : undefined;
+  const lng = params.lng ? parseFloat(params.lng) : undefined;
   const limit = 30;
   const offset = (page - 1) * limit;
 
@@ -91,63 +94,18 @@ export default async function Home({
         </div>
       </section>
 
-      {/* Restaurant List */}
-      <section className="max-w-5xl mx-auto px-4 py-4">
-        <div className="flex items-center justify-between mb-3">
-          <p className="text-sm text-zinc-500">
-            {total.toLocaleString()} restaurant{total !== 1 ? "s" : ""}
-            {borough !== "All" ? ` in ${borough}` : ""}
-            {search ? ` matching "${search}"` : ""}
-            {cuisine ? ` · ${cuisinesList.find(c => c.cuisine === cuisine)?.label || cuisine}` : ""}
-          </p>
-          {isFiltering && (
-            <a href="/" className="text-xs text-green-400 hover:underline">
-              Clear filters
-            </a>
-          )}
-        </div>
-
-        <div className="grid gap-2">
-          {restaurants.map((r) => (
-            <RestaurantCard key={r.place_id} r={r} />
-          ))}
-        </div>
-
-        {restaurants.length === 0 && (
-          <div className="text-center py-16">
-            <p className="text-xl text-zinc-400">No restaurants found</p>
-            <p className="text-sm text-zinc-500 mt-2">
-              Try a different zip code, neighborhood name, or{" "}
-              <a href="/" className="text-green-400 hover:underline">clear all filters</a>
-            </p>
-          </div>
-        )}
-
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="flex justify-center gap-4 mt-6 mb-4">
-            {page > 1 && (
-              <a
-                href={`/?borough=${borough}&search=${search}&cuisine=${cuisine}&page=${page - 1}`}
-                className="px-4 py-2 bg-zinc-800 rounded-lg hover:bg-zinc-700 text-sm transition-colors"
-              >
-                ← Previous
-              </a>
-            )}
-            <span className="px-4 py-2 text-sm text-zinc-500">
-              {page} / {totalPages}
-            </span>
-            {page < totalPages && (
-              <a
-                href={`/?borough=${borough}&search=${search}&cuisine=${cuisine}&page=${page + 1}`}
-                className="px-4 py-2 bg-zinc-800 rounded-lg hover:bg-zinc-700 text-sm transition-colors"
-              >
-                Next →
-              </a>
-            )}
-          </div>
-        )}
-      </section>
+      {/* Restaurant List / Map */}
+      <RestaurantSection
+        restaurants={restaurants}
+        total={total}
+        borough={borough}
+        search={search}
+        cuisine={cuisine}
+        cuisineLabel={cuisine ? (cuisinesList.find(c => c.cuisine === cuisine)?.label || cuisine) : ""}
+        page={page}
+        totalPages={totalPages}
+        isFiltering={!!isFiltering}
+      />
 
       {/* Why nodash — only on default view */}
       {!isFiltering && page === 1 && (

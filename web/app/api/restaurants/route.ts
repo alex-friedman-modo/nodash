@@ -9,6 +9,8 @@ export async function GET(request: NextRequest) {
     neighborhood: searchParams.get("neighborhood") || undefined,
     cuisine: searchParams.get("cuisine") || undefined,
     search: searchParams.get("search") || undefined,
+    lat: searchParams.get("lat") ? parseFloat(searchParams.get("lat")!) : undefined,
+    lng: searchParams.get("lng") ? parseFloat(searchParams.get("lng")!) : undefined,
     limit: searchParams.get("limit") ? parseInt(searchParams.get("limit")!) : 50,
     offset: searchParams.get("offset") ? parseInt(searchParams.get("offset")!) : 0,
   };

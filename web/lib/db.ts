@@ -30,6 +30,8 @@ export interface RestaurantFilters {
   neighborhood?: string;
   cuisine?: string;
   search?: string;
+  lat?: number;
+  lng?: number;
   limit?: number;
   offset?: number;
 }
@@ -82,6 +84,19 @@ export function getRestaurants(filters: RestaurantFilters = {}): {
     .prepare(`SELECT COUNT(*) as count FROM restaurants ${where}`)
     .get(...params) as { count: number };
 
+  const hasGeo = filters.lat !== undefined && filters.lng !== undefined;
+  const orderClause = hasGeo
+    ? `ORDER BY
+         CASE WHEN online_order_url IS NOT NULL THEN 0 ELSE 1 END,
+         (lat - ?) * (lat - ?) + (lng - ?) * (lng - ?) ASC`
+    : `ORDER BY
+         CASE WHEN online_order_url IS NOT NULL THEN 0 ELSE 1 END,
+         COALESCE(rating, 0) * MIN(COALESCE(review_count, 0), 500) DESC`;
+
+  const queryParams = hasGeo
+    ? [...params, filters.lat!, filters.lat!, filters.lng!, filters.lng!, limit, offset]
+    : [...params, limit, offset];
+
   const restaurants = db
     .prepare(
       `SELECT place_id, name, address, short_address, phone, website,
@@ -91,12 +106,10 @@ export function getRestaurants(filters: RestaurantFilters = {}): {
               detected_platform, scrape_status, llm_confidence, serves_vegetarian,
               generative_summary, editorial_summary
        FROM restaurants ${where}
-       ORDER BY
-         CASE WHEN online_order_url IS NOT NULL THEN 0 ELSE 1 END,
-         COALESCE(rating, 0) * MIN(COALESCE(review_count, 0), 500) DESC
+       ${orderClause}
        LIMIT ? OFFSET ?`
     )
-    .all(...params, limit, offset) as Restaurant[];
+    .all(...queryParams) as Restaurant[];
 
   return { restaurants, total: countRow.count };
 }

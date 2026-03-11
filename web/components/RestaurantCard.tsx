@@ -7,6 +7,12 @@ import { type Restaurant, formatCuisine, formatOrderingMethod } from "@/lib/form
 export default function RestaurantCard({ r }: { r: Restaurant }) {
   const cuisine = formatCuisine(r.primary_type);
   const method = formatOrderingMethod(r.ordering_method, r.detected_platform);
+  const description = r.editorial_summary || r.generative_summary || null;
+  const truncatedDesc = description
+    ? description.length > 80
+      ? description.slice(0, 80).trimEnd() + "…"
+      : description
+    : null;
 
   const feeDisplay = r.delivery_fee
     ? r.delivery_fee.toLowerCase() === "free"
@@ -39,7 +45,18 @@ export default function RestaurantCard({ r }: { r: Restaurant }) {
                 </span>
               </>
             )}
+            {r.review_count && r.review_count >= 500 && (
+              <>
+                <span className="text-zinc-600">·</span>
+                <span className="text-xs bg-orange-500/20 text-orange-400 px-2 py-0.5 rounded-full">
+                  🔥 Popular
+                </span>
+              </>
+            )}
           </div>
+          {truncatedDesc && (
+            <p className="text-sm text-zinc-400 mt-1 truncate">{truncatedDesc}</p>
+          )}
         </Link>
         <span className="flex-shrink-0 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-500/10 text-green-400 border border-green-500/20">
           Direct ✓
