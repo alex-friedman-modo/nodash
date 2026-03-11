@@ -1,7 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  output: "standalone",
+  // Fix workspace root detection when deployed
+  outputFileTracingRoot: undefined,
 };
 
 export default nextConfig;
