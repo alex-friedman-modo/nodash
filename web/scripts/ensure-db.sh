@@ -16,5 +16,6 @@ fi
 cp -r .next/static .next/standalone/.next/static 2>/dev/null || true
 cp -r public .next/standalone/public 2>/dev/null || true
 
-# Start the Next.js server
+# Start the Next.js server (HOSTNAME=0.0.0.0 required for Railway)
+export HOSTNAME="0.0.0.0"
 exec node .next/standalone/server.js
