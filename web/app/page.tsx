@@ -17,15 +17,25 @@ export default async function Home({
   const limit = 50;
   const offset = (page - 1) * limit;
 
-  const { restaurants, total } = getRestaurants({
-    borough: borough === "All" ? undefined : borough,
-    search: search || undefined,
-    limit,
-    offset,
-  });
+  let restaurants: Awaited<ReturnType<typeof getRestaurants>>["restaurants"] = [];
+  let total = 0;
+  let boroughCounts: Record<string, number> = {};
+  let totalDirect = 0;
 
-  const boroughCounts = getBoroughCounts();
-  const totalDirect = getTotalDirectDelivery();
+  try {
+    const result = getRestaurants({
+      borough: borough === "All" ? undefined : borough,
+      search: search || undefined,
+      limit,
+      offset,
+    });
+    restaurants = result.restaurants;
+    total = result.total;
+    boroughCounts = getBoroughCounts();
+    totalDirect = getTotalDirectDelivery();
+  } catch (e) {
+    console.error("DB error on homepage:", e);
+  }
 
   return (
     <main className="min-h-screen bg-zinc-950 text-white">

@@ -6,7 +6,6 @@
   },
   "deploy": {
     "startCommand": "bash scripts/ensure-db.sh",
-    "healthcheckPath": "/",
     "restartPolicyType": "ON_FAILURE",
     "restartPolicyMaxRetries": 3
   }
