@@ -57,8 +57,8 @@ export function getRestaurants(filters: RestaurantFilters = {}): {
   }
 
   if (filters.search) {
-    conditions.push("(name LIKE ? OR neighborhood LIKE ?)");
-    params.push(`%${filters.search}%`, `%${filters.search}%`);
+    conditions.push("(name LIKE ? OR neighborhood LIKE ? OR address LIKE ? OR zip_code = ?)");
+    params.push(`%${filters.search}%`, `%${filters.search}%`, `%${filters.search}%`, filters.search);
   }
 
   const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
@@ -78,7 +78,9 @@ export function getRestaurants(filters: RestaurantFilters = {}): {
               detected_platform, scrape_status, llm_confidence, serves_vegetarian,
               generative_summary, editorial_summary
        FROM restaurants ${where}
-       ORDER BY rating DESC NULLS LAST, review_count DESC NULLS LAST
+       ORDER BY
+         CASE WHEN online_order_url IS NOT NULL THEN 0 ELSE 1 END,
+         COALESCE(rating, 0) * MIN(COALESCE(review_count, 0), 500) DESC
        LIMIT ? OFFSET ?`
     )
     .all(...params, limit, offset) as Restaurant[];
@@ -140,8 +142,9 @@ export function getCuisineCounts(): { cuisine: string; label: string; count: num
     .prepare(
       `SELECT primary_type, COUNT(*) as count FROM restaurants
        WHERE direct_delivery = 1 AND primary_type IS NOT NULL
-       GROUP BY primary_type HAVING count >= 10
-       ORDER BY count DESC`
+       GROUP BY primary_type HAVING count >= 20
+       ORDER BY count DESC
+       LIMIT 15`
     )
     .all() as { primary_type: string; count: number }[];
   return rows.map((r) => ({

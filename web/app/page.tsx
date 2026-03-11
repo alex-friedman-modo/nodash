@@ -57,32 +57,19 @@ export default async function Home({
 
       {/* Hero */}
       <section className="border-b border-zinc-800 bg-zinc-950">
-        <div className="max-w-5xl mx-auto px-4 py-16 md:py-24">
+        <div className="max-w-5xl mx-auto px-4 py-10 md:py-14">
           <h1 className="text-4xl md:text-6xl font-bold tracking-tight">
             Order direct.
             <br />
             <span className="text-green-400">Skip the cut.</span>
           </h1>
           <p className="mt-4 text-lg md:text-xl text-zinc-400 max-w-2xl">
-            {totalDirect.toLocaleString()} NYC restaurants that deliver without DoorDash, Uber Eats,
-            or Grubhub. Your money goes to the restaurant, not a middleman.
+            {totalDirect.toLocaleString()} NYC restaurants that deliver without the apps.
+            Your money goes to the restaurant, not a middleman.
           </p>
-          <div className="flex flex-wrap gap-6 mt-8 text-sm text-zinc-500">
-            <div>
-              <span className="text-2xl font-bold text-white block">
-                {totalDirect.toLocaleString()}
-              </span>
-              restaurants verified
-            </div>
-            <div>
-              <span className="text-2xl font-bold text-white block">$0</span>
-              platform fees
-            </div>
-            <div>
-              <span className="text-2xl font-bold text-white block">5</span>
-              boroughs covered
-            </div>
-          </div>
+          <p className="mt-6 text-sm text-zinc-500">
+            Search your neighborhood, zip code, or restaurant name below 👇
+          </p>
         </div>
       </section>
 
@@ -150,35 +137,37 @@ export default async function Home({
         )}
       </section>
 
-      {/* Why nodash */}
-      <section className="border-t border-zinc-800 mt-8">
-        <div className="max-w-5xl mx-auto px-4 py-16">
-          <h2 className="text-2xl font-bold mb-8">Why nodash?</h2>
-          <div className="grid md:grid-cols-3 gap-8">
-            <div>
-              <h3 className="font-semibold text-green-400 mb-2">Your money actually gets there</h3>
-              <p className="text-zinc-400 text-sm">
-                Delivery apps take 15–30% of every order. When you order direct, the restaurant
-                keeps what you paid them.
-              </p>
-            </div>
-            <div>
-              <h3 className="font-semibold text-green-400 mb-2">No app. No account. No algorithm.</h3>
-              <p className="text-zinc-400 text-sm">
-                Search by neighborhood. See the delivery fee, the minimum, the phone number.
-                That&apos;s it. It&apos;s a directory, not a platform.
-              </p>
-            </div>
-            <div>
-              <h3 className="font-semibold text-green-400 mb-2">Every listing is verified</h3>
-              <p className="text-zinc-400 text-sm">
-                We checked every restaurant. Confirmed direct delivery — by phone, their own
-                website, Toast, Slice, or however they do it.
-              </p>
+      {/* Why nodash — only show when no search active */}
+      {!search && borough === "All" && !cuisine && (
+        <section className="border-t border-zinc-800 mt-8">
+          <div className="max-w-5xl mx-auto px-4 py-12">
+            <h2 className="text-2xl font-bold mb-6">Why nodash?</h2>
+            <div className="grid md:grid-cols-3 gap-6">
+              <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-5">
+                <p className="font-semibold text-green-400 mb-2">💰 Your money gets there</p>
+                <p className="text-zinc-400 text-sm">
+                  Delivery apps take 15–30% per order. When you order direct, the restaurant
+                  keeps what you paid.
+                </p>
+              </div>
+              <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-5">
+                <p className="font-semibold text-green-400 mb-2">📱 No app needed</p>
+                <p className="text-zinc-400 text-sm">
+                  Search your neighborhood. See the fee. Call or click. That&apos;s it.
+                  It&apos;s a directory, not a platform.
+                </p>
+              </div>
+              <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-5">
+                <p className="font-semibold text-green-400 mb-2">✅ Every listing verified</p>
+                <p className="text-zinc-400 text-sm">
+                  We checked every restaurant. Confirmed direct delivery — by phone, website,
+                  Toast, Slice, or however they do it.
+                </p>
+              </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* Footer */}
       <footer className="border-t border-zinc-800 py-8">

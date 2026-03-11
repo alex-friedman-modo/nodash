@@ -31,7 +31,7 @@ export default function SearchBar({ initialSearch }: { initialSearch: string }) 
         type="text"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
-        placeholder="Search restaurants or neighborhoods..."
+        placeholder="Search by zip code, neighborhood, or restaurant name..."
         className="w-full bg-zinc-900 border border-zinc-700 rounded-lg pl-10 pr-4 py-2.5 text-sm text-white placeholder:text-zinc-500 focus:outline-none focus:border-green-500/50 focus:ring-1 focus:ring-green-500/25"
       />
     </form>
