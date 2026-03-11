@@ -12,12 +12,12 @@ import aiohttp
 DB_PATH = os.path.join(os.path.dirname(__file__), "..", "data", "restaurants.db")
 API_KEY = os.environ.get("GOOGLE_PLACES_API_KEY", "")
 PLACES_BASE = "https://places.googleapis.com/v1/places"
-MAX_RPS = 10  # max requests per second
-SEMAPHORE_LIMIT = 10  # concurrent requests
+MAX_RPS = 10
+SEMAPHORE_LIMIT = 10
+BATCH_SIZE = 50  # write to DB every N results
 
 
 def ensure_columns(db_path: str):
-    """Add photo_url column if it doesn't exist."""
     conn = sqlite3.connect(db_path)
     cur = conn.cursor()
     cols = {row[1] for row in cur.execute("PRAGMA table_info(restaurants)").fetchall()}
@@ -29,7 +29,6 @@ def ensure_columns(db_path: str):
 
 
 def get_restaurants(db_path: str, limit: int | None = None, borough: str | None = None) -> list[tuple[str, str]]:
-    """Return (place_id, name) for restaurants needing photos."""
     conn = sqlite3.connect(db_path)
     cur = conn.cursor()
     q = "SELECT place_id, name FROM restaurants WHERE direct_delivery=1 AND (photo_url IS NULL OR photo_url='')"
@@ -46,9 +45,7 @@ def get_restaurants(db_path: str, limit: int | None = None, borough: str | None 
 
 
 class RateLimiter:
-    """Token-bucket rate limiter."""
     def __init__(self, rate: float):
-        self.rate = rate
         self.interval = 1.0 / rate
         self._last = 0.0
         self._lock = asyncio.Lock()
@@ -62,11 +59,21 @@ class RateLimiter:
             self._last = time.monotonic()
 
 
+def save_batch(db_path: str, results: list[tuple[str, str]]):
+    """Write a batch of (place_id, photo_url) to the DB."""
+    if not results:
+        return
+    conn = sqlite3.connect(db_path)
+    cur = conn.cursor()
+    for place_id, photo_url in results:
+        cur.execute("UPDATE restaurants SET photo_url=? WHERE place_id=?", (photo_url, place_id))
+    conn.commit()
+    conn.close()
+
+
 async def fetch_photo_url(session: aiohttp.ClientSession, place_id: str, name: str,
                           rate_limiter: RateLimiter, semaphore: asyncio.Semaphore) -> tuple[str, str | None]:
-    """Fetch the first photo URL for a place_id. Returns (place_id, photo_url or None)."""
     async with semaphore:
-        # Step 1: Get photo references
         await rate_limiter.acquire()
         url = f"{PLACES_BASE}/{place_id}"
         headers = {
@@ -86,7 +93,6 @@ async def fetch_photo_url(session: aiohttp.ClientSession, place_id: str, name: s
                 print(f"  ○ {name}: no photos")
                 return (place_id, None)
 
-            # Step 2: Get the actual photo URI from the first photo
             photo_name = photos[0].get("name", "")
             if not photo_name:
                 return (place_id, None)
@@ -104,7 +110,7 @@ async def fetch_photo_url(session: aiohttp.ClientSession, place_id: str, name: s
 
             photo_uri = media_data.get("photoUri", "")
             if photo_uri:
-                print(f"  ✓ {name}: {photo_uri[:80]}...")
+                print(f"  ✓ {name}")
                 return (place_id, photo_uri)
             else:
                 print(f"  ✗ {name}: no photoUri in response")
@@ -136,28 +142,32 @@ async def main():
 
     rate_limiter = RateLimiter(MAX_RPS)
     semaphore = asyncio.Semaphore(SEMAPHORE_LIMIT)
-    results = []
-
-    async with aiohttp.ClientSession() as session:
-        tasks = [
-            fetch_photo_url(session, pid, name, rate_limiter, semaphore)
-            for pid, name in restaurants
-        ]
-        results = await asyncio.gather(*tasks)
-
-    # Write results to DB
-    conn = sqlite3.connect(DB_PATH)
-    cur = conn.cursor()
+    
     found = 0
     errors = 0
-    for place_id, photo_url in results:
-        if photo_url:
-            cur.execute("UPDATE restaurants SET photo_url=? WHERE place_id=?", (photo_url, place_id))
-            found += 1
-        else:
-            errors += 1
-    conn.commit()
-    conn.close()
+    pending_writes: list[tuple[str, str]] = []
+
+    async with aiohttp.ClientSession() as session:
+        # Process in chunks to allow incremental DB writes
+        for i in range(0, total, BATCH_SIZE):
+            chunk = restaurants[i:i + BATCH_SIZE]
+            tasks = [
+                fetch_photo_url(session, pid, name, rate_limiter, semaphore)
+                for pid, name in chunk
+            ]
+            results = await asyncio.gather(*tasks)
+            
+            batch_writes = []
+            for place_id, photo_url in results:
+                if photo_url:
+                    batch_writes.append((place_id, photo_url))
+                    found += 1
+                else:
+                    errors += 1
+            
+            save_batch(DB_PATH, batch_writes)
+            processed = min(i + BATCH_SIZE, total)
+            print(f"  [{processed}/{total}] saved {len(batch_writes)} photos (total: {found} found, {errors} missing)")
 
     print(f"\nDone! {found}/{total} photos found, {errors} missing/errors")
 

@@ -33,6 +33,17 @@ export default async function RestaurantPage({
           <ArrowLeft className="w-4 h-4" /> Back to directory
         </Link>
 
+        {/* Photo */}
+        {r.photo_url && (
+          <div className="w-full h-48 md:h-64 rounded-xl overflow-hidden bg-zinc-800 mb-6">
+            <img
+              src={r.photo_url}
+              alt={r.name}
+              className="w-full h-full object-cover"
+            />
+          </div>
+        )}
+
         {/* Header */}
         <div className="flex items-start justify-between gap-4">
           <div>

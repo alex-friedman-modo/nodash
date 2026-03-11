@@ -73,4 +73,5 @@ export interface Restaurant {
   serves_vegetarian: number | null;
   generative_summary: string | null;
   editorial_summary: string | null;
+  photo_url: string | null;
 }
