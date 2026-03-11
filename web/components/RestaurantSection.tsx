@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import dynamic from "next/dynamic";
 import type { Restaurant } from "@/lib/formatters";
 import RestaurantCard from "@/components/RestaurantCard";
@@ -33,15 +33,18 @@ export default function RestaurantSection({
 }: RestaurantSectionProps) {
   const [view, setView] = useState<"list" | "map">("list");
 
+  const mapPinsUrl = useMemo(() => {
+    const params = new URLSearchParams();
+    if (borough && borough !== "All") params.set("borough", borough);
+    if (cuisine) params.set("cuisine", cuisine);
+    if (search) params.set("search", search);
+    const qs = params.toString();
+    return `/api/map-pins${qs ? `?${qs}` : ""}`;
+  }, [borough, cuisine, search]);
+
   return (
     <section className="max-w-5xl mx-auto px-4 py-4">
-      <div className="flex items-center justify-between mb-3">
-        <p className="text-sm text-zinc-500">
-          {total.toLocaleString()} restaurant{total !== 1 ? "s" : ""}
-          {borough !== "All" ? ` in ${borough}` : ""}
-          {search ? ` matching "${search}"` : ""}
-          {cuisineLabel ? ` · ${cuisineLabel}` : ""}
-        </p>
+      <div className="flex items-center justify-end mb-3">
         <div className="flex items-center gap-3">
           {isFiltering && (
             <a href="/" className="text-xs text-green-400 hover:underline">
@@ -53,7 +56,7 @@ export default function RestaurantSection({
       </div>
 
       {view === "map" ? (
-        <MapView restaurants={restaurants} />
+        <MapView mapPinsUrl={mapPinsUrl} />
       ) : (
         <>
           <div className="grid gap-2">

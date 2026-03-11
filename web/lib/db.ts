@@ -180,6 +180,66 @@ export function getCuisineCounts(): { cuisine: string; label: string; count: num
   }));
 }
 
+export interface MapPin {
+  place_id: string;
+  name: string;
+  lat: number;
+  lng: number;
+  primary_type: string | null;
+  rating: number | null;
+  review_count: number | null;
+  phone: string | null;
+  online_order_url: string | null;
+  photo_url: string | null;
+  neighborhood: string | null;
+}
+
+export function getMapPins(filters: {
+  borough?: string;
+  cuisine?: string;
+  search?: string;
+} = {}): MapPin[] {
+  const db = getDb();
+  const conditions: string[] = ["direct_delivery = 1"];
+  const params: (string | number)[] = [];
+
+  if (filters.borough && filters.borough !== "All") {
+    conditions.push("borough = ?");
+    params.push(filters.borough);
+  }
+
+  if (filters.cuisine) {
+    conditions.push("cuisine_label = ?");
+    params.push(filters.cuisine);
+  }
+
+  if (filters.search) {
+    const searchLower = filters.search.toLowerCase().trim();
+    const aliasDistricts = NEIGHBORHOOD_ALIASES[searchLower];
+    if (aliasDistricts && aliasDistricts.length > 0) {
+      const placeholders = aliasDistricts.map(() => "?").join(", ");
+      conditions.push(
+        `(neighborhood IN (${placeholders}) OR name LIKE ? OR address LIKE ? OR zip_code = ?)`
+      );
+      params.push(...aliasDistricts, `%${filters.search}%`, `%${filters.search}%`, filters.search);
+    } else {
+      conditions.push("(name LIKE ? OR neighborhood LIKE ? OR address LIKE ? OR zip_code = ?)");
+      params.push(`%${filters.search}%`, `%${filters.search}%`, `%${filters.search}%`, filters.search);
+    }
+  }
+
+  const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+
+  return db
+    .prepare(
+      `SELECT place_id, name, lat, lng, primary_type, rating, review_count,
+              phone, online_order_url, photo_url, neighborhood
+       FROM restaurants ${where}
+       ORDER BY COALESCE(rating, 0) * MIN(COALESCE(review_count, 0), 500) DESC`
+    )
+    .all(...params) as MapPin[];
+}
+
 export function getTotalDirectDelivery(): number {
   const db = getDb();
   const row = db
