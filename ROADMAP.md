@@ -13,8 +13,7 @@
 
 ## 🏗️ IN PROGRESS
 
-- [ ] Neighborhood name mapping (Park Slope → Northwest Brooklyn) for better search
-- [ ] Getting Railway deploy stable with latest code
+- [ ] Waiting for Railway deploys to land with latest code
 
 ## 📋 TODO — Engineering
 
@@ -67,6 +66,15 @@
 - [x] Feedback page at `/feedback`
 - [x] Nav bar with About + Feedback links
 - [x] Split formatters from db.ts for client component compatibility
+- [x] Homepage redesign v2 — compact hero, emoji cards, warmer copy
+- [x] SVG favicon (green "n")
+- [x] Neighborhood alias search — Park Slope→87, Williamsburg→161, Astoria→131
+- [x] Cuisine labels — merged categories (Pizza→891, Japanese+Sushi+Ramen→303)
+- [x] Smart sorting — online-order-first, then rating×reviews
+- [x] Zip code search — 11215→62 results
+- [x] PWA manifest for home screen install
+- [x] Cleaned 854 broken order URLs
+- [x] Feedback page at /feedback
 
 ## 📊 KEY METRICS
 
