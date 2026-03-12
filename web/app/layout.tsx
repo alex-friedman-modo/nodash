@@ -19,6 +19,20 @@ export const metadata: Metadata = {
     description:
       "3,000+ NYC restaurants that deliver without delivery apps. Your money goes to the restaurant.",
     type: "website",
+    images: [
+      {
+        url: "/og.png",
+        width: 1200,
+        height: 630,
+        alt: "nodash — Your neighborhood delivers. 3,067 NYC restaurants with direct delivery.",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "nodash — Order Direct. Skip the Cut.",
+    description: "3,067 NYC restaurants that deliver without the apps.",
+    images: ["/og.png"],
   },
 };
 
@@ -30,7 +44,9 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
         <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+        <link rel="apple-touch-icon" href="/og.png" />
         <link rel="manifest" href="/manifest.json" />
         <meta name="theme-color" content="#0a0a0a" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
