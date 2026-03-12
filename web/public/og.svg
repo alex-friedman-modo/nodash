@@ -17,7 +17,7 @@
   
   <!-- Main headline -->
   <text x="80" y="240" font-family="system-ui, -apple-system, Helvetica, Arial, sans-serif" font-size="72" font-weight="bold" fill="white">Your neighborhood</text>
-  <text x="80" y="320" font-family="system-ui, -apple-system, Helvetica, Arial, sans-serif" font-size="72" font-weight="bold" fill="#22c55e">delivers.</text>
+  <text x="80" y="320" font-family="system-ui, -apple-system, Helvetica, Arial, sans-serif" font-size="72" font-weight="bold" fill="white">delivers. <tspan fill="#22c55e">Free.</tspan></text>
   
   <!-- Subtitle -->
   <text x="80" y="400" font-family="system-ui, -apple-system, Helvetica, Arial, sans-serif" font-size="28" fill="#a1a1aa">3,067 NYC restaurants with direct delivery.</text>
