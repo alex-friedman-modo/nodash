@@ -104,9 +104,9 @@
 - **Call needed:** 1,611
 - **No website (need calls):** 1,518
 - **Uncertain (LLM medium):** 881
-- **DB version:** v0.1.3 (photos + cuisine labels)
-- **Delivery fee coverage:** 397/3,067 (12%) — 198 free
-- **Delivery minimum coverage:** 197/3,067 (6%)
+- **DB version:** v0.1.4 (Slice minimums added)
+- **Delivery fee coverage:** 482/3,067 (15%) — 198 free
+- **Delivery minimum coverage:** 286/3,067 (9%) — was 6%
 - **Delivery radius coverage:** 519/3,067 (16%)
 - **Platform breakdown:** Slice 578, Toast 398, Sauce 161, ChowNow 159, Menufy 105
 
