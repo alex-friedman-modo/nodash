@@ -9,25 +9,27 @@ interface ViewToggleProps {
 
 export default function ViewToggle({ view, onToggle }: ViewToggleProps) {
   return (
-    <div className="flex items-center bg-zinc-900 border border-zinc-800 rounded-lg p-0.5">
+    <div className="flex items-center rounded-lg p-0.5" style={{ background: "var(--card-bg)", border: "1px solid var(--card-border)" }}>
       <button
         onClick={() => onToggle("list")}
-        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+        className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all"
+        style={
           view === "list"
-            ? "bg-zinc-800 text-white"
-            : "text-zinc-500 hover:text-zinc-300"
-        }`}
+            ? { background: "var(--accent-light)", color: "var(--accent)" }
+            : { color: "var(--muted)" }
+        }
       >
         <List size={14} />
         List
       </button>
       <button
         onClick={() => onToggle("map")}
-        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+        className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all"
+        style={
           view === "map"
-            ? "bg-zinc-800 text-white"
-            : "text-zinc-500 hover:text-zinc-300"
-        }`}
+            ? { background: "var(--accent-light)", color: "var(--accent)" }
+            : { color: "var(--muted)" }
+        }
       >
         <Map size={14} />
         Map

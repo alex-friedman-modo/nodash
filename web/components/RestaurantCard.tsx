@@ -15,13 +15,17 @@ export default function RestaurantCard({ r }: { r: Restaurant }) {
     : null;
 
   return (
-    <div className="bg-zinc-900/50 border border-zinc-800/50 rounded-xl hover:border-zinc-700 transition-all group">
+    <div
+      className="rounded-xl hover:shadow-md transition-all group"
+      style={{ background: "var(--card-bg)", border: "1px solid var(--card-border)" }}
+    >
       <div className="flex">
-        {/* Photo — left side on mobile */}
+        {/* Photo */}
         {r.photo_url && (
           <Link
             href={`/restaurants/${encodeURIComponent(r.place_id)}`}
-            className="flex-shrink-0 w-24 h-full min-h-[100px] md:w-28 rounded-l-xl overflow-hidden bg-zinc-800"
+            className="flex-shrink-0 w-24 h-full min-h-[100px] md:w-28 rounded-l-xl overflow-hidden"
+            style={{ background: "var(--card-border)" }}
           >
             <img
               src={r.photo_url}
@@ -36,32 +40,35 @@ export default function RestaurantCard({ r }: { r: Restaurant }) {
         <div className="flex-1 min-w-0 p-3">
           <Link href={`/restaurants/${encodeURIComponent(r.place_id)}`} className="block">
             <div className="flex items-start justify-between gap-2">
-              <h3 className="font-semibold text-white leading-tight group-hover:text-green-400 transition-colors line-clamp-1">
+              <h3 className="font-semibold leading-tight line-clamp-1 group-hover:opacity-70 transition-opacity">
                 {r.name}
               </h3>
               {r.review_count && r.review_count >= 500 && (
-                <span className="flex-shrink-0 text-xs bg-orange-500/15 text-orange-400 px-1.5 py-0.5 rounded-full">
+                <span
+                  className="flex-shrink-0 text-xs px-1.5 py-0.5 rounded-full"
+                  style={{ background: "var(--accent-light)", color: "var(--accent)" }}
+                >
                   🔥
                 </span>
               )}
             </div>
-            <div className="flex items-center gap-1.5 mt-0.5 text-xs text-zinc-500">
+            <div className="flex items-center gap-1.5 mt-0.5 text-xs" style={{ color: "var(--muted)" }}>
               <span>{cuisine}</span>
               <span>·</span>
               <span>{r.neighborhood}</span>
               {r.rating && (
                 <>
                   <span>·</span>
-                  <span className="text-zinc-400">⭐ {r.rating}</span>
+                  <span>⭐ {r.rating}</span>
                 </>
               )}
             </div>
             {truncatedDesc && (
-              <p className="text-xs text-zinc-500 mt-1 line-clamp-1">{truncatedDesc}</p>
+              <p className="text-xs mt-1 line-clamp-1" style={{ color: "var(--muted)" }}>{truncatedDesc}</p>
             )}
           </Link>
 
-          {/* CTAs — bottom of card */}
+          {/* CTAs */}
           <div className="flex items-center gap-2 mt-2">
             {r.online_order_url ? (
               <a
@@ -69,13 +76,14 @@ export default function RestaurantCard({ r }: { r: Restaurant }) {
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={(e) => e.stopPropagation()}
-                className="inline-flex items-center gap-1 bg-green-600 hover:bg-green-500 text-white text-xs font-medium rounded-lg px-3 py-1.5 transition-colors"
+                className="inline-flex items-center gap-1 text-white text-xs font-medium rounded-lg px-3 py-1.5 transition-opacity hover:opacity-90"
+                style={{ background: "var(--accent)" }}
               >
                 <ExternalLink className="w-3 h-3" />
                 Order Online
               </a>
             ) : (
-              <span className="text-xs text-zinc-600 bg-zinc-800/50 px-2 py-1 rounded-lg">
+              <span className="text-xs px-2 py-1 rounded-lg" style={{ background: "var(--accent-light)", color: "var(--muted)" }}>
                 {method}
               </span>
             )}
@@ -83,7 +91,8 @@ export default function RestaurantCard({ r }: { r: Restaurant }) {
               <a
                 href={`tel:${r.phone}`}
                 onClick={(e) => e.stopPropagation()}
-                className="inline-flex items-center gap-1 text-zinc-400 hover:text-white text-xs transition-colors"
+                className="inline-flex items-center gap-1 text-xs transition-opacity hover:opacity-70"
+                style={{ color: "var(--muted)" }}
               >
                 <Phone className="w-3 h-3" />
                 <span className="hidden sm:inline">{r.phone}</span>
@@ -91,7 +100,7 @@ export default function RestaurantCard({ r }: { r: Restaurant }) {
               </a>
             )}
             {r.delivery_fee && r.delivery_fee.toLowerCase() === "free" && (
-              <span className="text-xs text-green-400/70">Free delivery</span>
+              <span className="text-xs" style={{ color: "var(--accent)" }}>Free delivery</span>
             )}
           </div>
         </div>

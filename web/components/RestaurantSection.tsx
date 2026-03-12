@@ -67,10 +67,10 @@ export default function RestaurantSection({
 
           {restaurants.length === 0 && (
             <div className="text-center py-16">
-              <p className="text-xl text-zinc-400">No restaurants found</p>
-              <p className="text-sm text-zinc-500 mt-2">
+              <p className="text-xl" style={{ color: "var(--muted)" }}>No restaurants found</p>
+              <p className="text-sm mt-2" style={{ color: "var(--muted-light)" }}>
                 Try a different zip code, neighborhood name, or{" "}
-                <a href="/" className="text-green-400 hover:underline">
+                <a href="/" className="hover:underline" style={{ color: "var(--accent)" }}>
                   clear all filters
                 </a>
               </p>
@@ -83,18 +83,20 @@ export default function RestaurantSection({
               {page > 1 && (
                 <a
                   href={`/?borough=${borough}&search=${search}&cuisine=${cuisine}&page=${page - 1}`}
-                  className="px-4 py-2 bg-zinc-800 rounded-lg hover:bg-zinc-700 text-sm transition-colors"
+                  className="px-4 py-2 rounded-lg text-sm transition-all hover:opacity-80"
+                  style={{ background: "var(--card-bg)", border: "1px solid var(--card-border)" }}
                 >
                   ← Previous
                 </a>
               )}
-              <span className="px-4 py-2 text-sm text-zinc-500">
+              <span className="px-4 py-2 text-sm" style={{ color: "var(--muted-light)" }}>
                 {page} / {totalPages}
               </span>
               {page < totalPages && (
                 <a
                   href={`/?borough=${borough}&search=${search}&cuisine=${cuisine}&page=${page + 1}`}
-                  className="px-4 py-2 bg-zinc-800 rounded-lg hover:bg-zinc-700 text-sm transition-colors"
+                  className="px-4 py-2 rounded-lg text-sm transition-all hover:opacity-80"
+                  style={{ background: "var(--accent)", color: "white" }}
                 >
                   Next →
                 </a>

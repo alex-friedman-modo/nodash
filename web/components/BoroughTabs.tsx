@@ -35,11 +35,12 @@ export default function BoroughTabs({
           <button
             key={b}
             onClick={() => handleClick(b)}
-            className={`flex-shrink-0 px-2.5 py-1 rounded-full text-xs transition-colors ${
+            className="flex-shrink-0 px-2.5 py-1 rounded-full text-xs font-medium transition-all"
+            style={
               isActive
-                ? "bg-green-500/20 text-green-400"
-                : "text-zinc-500 hover:text-zinc-300"
-            }`}
+                ? { background: "var(--accent-light)", color: "var(--accent)" }
+                : { color: "var(--muted)" }
+            }
           >
             {b === "Staten Island" ? "SI" : b}
           </button>

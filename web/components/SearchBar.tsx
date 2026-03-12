@@ -4,7 +4,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useState, useCallback } from "react";
 import { Search } from "lucide-react";
 
-export default function SearchBar({ initialSearch, basePath = "/" }: { initialSearch: string; basePath?: string }) {
+export default function SearchBar({ initialSearch, basePath }: { initialSearch: string; basePath?: string }) {
   const [query, setQuery] = useState(initialSearch);
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -19,20 +19,26 @@ export default function SearchBar({ initialSearch, basePath = "/" }: { initialSe
         params.delete("search");
       }
       params.delete("page");
-      router.push(`${basePath}?${params.toString()}`);
+      const base = basePath || "/";
+      router.push(`${base}?${params.toString()}`);
     },
     [query, router, searchParams, basePath]
   );
 
   return (
     <form onSubmit={handleSubmit} className="relative">
-      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: "var(--muted-light)" }} />
       <input
         type="text"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         placeholder="Search by zip code, neighborhood, or restaurant name..."
-        className="w-full bg-zinc-900 border border-zinc-700 rounded-lg pl-10 pr-4 py-3 text-base md:text-sm text-white placeholder:text-zinc-500 focus:outline-none focus:border-green-500/50 focus:ring-1 focus:ring-green-500/25"
+        className="w-full rounded-lg pl-10 pr-4 py-3 text-base md:text-sm focus:outline-none focus:ring-2 placeholder:opacity-50"
+        style={{
+          background: "var(--card-bg)",
+          border: "1px solid var(--card-border)",
+          color: "var(--foreground)",
+        }}
         enterKeyHint="search"
         autoComplete="off"
         autoCorrect="off"
