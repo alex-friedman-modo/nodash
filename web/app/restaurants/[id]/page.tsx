@@ -4,6 +4,14 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { Phone, Globe, MapPin, ArrowLeft, ExternalLink, Clock } from "lucide-react";
 
+const BOROUGH_TO_SLUG: Record<string, string> = {
+  Manhattan: "manhattan",
+  Brooklyn: "brooklyn",
+  Queens: "queens",
+  Bronx: "bronx",
+  "Staten Island": "staten-island",
+};
+
 export const dynamic = "force-dynamic";
 
 export default async function RestaurantPage({
@@ -25,13 +33,23 @@ export default async function RestaurantPage({
   return (
     <main className="min-h-screen bg-zinc-950 text-white">
       <div className="max-w-3xl mx-auto px-4 py-8">
-        {/* Back */}
-        <Link
-          href="/"
-          className="inline-flex items-center gap-1 text-sm text-zinc-500 hover:text-zinc-300 mb-8"
-        >
-          <ArrowLeft className="w-4 h-4" /> Back to directory
-        </Link>
+        {/* Breadcrumb */}
+        <div className="flex items-center gap-2 text-sm text-zinc-500 mb-8">
+          <Link href="/" className="hover:text-zinc-300">Home</Link>
+          <span>/</span>
+          {r.borough && BOROUGH_TO_SLUG[r.borough] ? (
+            <>
+              <Link
+                href={`/${BOROUGH_TO_SLUG[r.borough]}`}
+                className="hover:text-zinc-300"
+              >
+                {r.borough}
+              </Link>
+              <span>/</span>
+            </>
+          ) : null}
+          <span className="text-zinc-400 truncate max-w-[200px]">{r.name}</span>
+        </div>
 
         {/* Photo */}
         {r.photo_url && (

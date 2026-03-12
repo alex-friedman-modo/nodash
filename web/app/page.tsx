@@ -167,20 +167,56 @@ export default async function Home({
         </section>
       )}
 
-      {/* Footer — minimal */}
-      <footer className="border-t border-zinc-800/50 py-4">
-        <div className="max-w-5xl mx-auto px-4 text-center text-zinc-600 text-xs">
-          <p>
-            <span className="text-zinc-500">nodash</span><span className="text-green-400">.</span>
-            {" "}Order direct. Skip the cut.
-          </p>
-          <p className="mt-1">
-            <a href="/about" className="hover:text-zinc-400">About</a>
-            {" · "}
-            <a href="/feedback" className="hover:text-zinc-400">Feedback</a>
-            {" · "}
-            <a href="mailto:afriedman1997@gmail.com" className="hover:text-zinc-400">List your restaurant</a>
-          </p>
+      {/* Footer */}
+      <footer className="border-t border-zinc-800/50 py-6">
+        <div className="max-w-5xl mx-auto px-4">
+          {/* Borough & Cuisine Links */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-6 text-sm">
+            <div>
+              <h3 className="font-semibold text-zinc-400 uppercase tracking-wider text-xs mb-2">Boroughs</h3>
+              <ul className="space-y-1">
+                <li><a href="/manhattan" className="text-zinc-500 hover:text-green-400">Manhattan</a></li>
+                <li><a href="/brooklyn" className="text-zinc-500 hover:text-green-400">Brooklyn</a></li>
+                <li><a href="/queens" className="text-zinc-500 hover:text-green-400">Queens</a></li>
+                <li><a href="/bronx" className="text-zinc-500 hover:text-green-400">Bronx</a></li>
+                <li><a href="/staten-island" className="text-zinc-500 hover:text-green-400">Staten Island</a></li>
+              </ul>
+            </div>
+            <div>
+              <h3 className="font-semibold text-zinc-400 uppercase tracking-wider text-xs mb-2">Cuisines</h3>
+              <ul className="space-y-1">
+                <li><a href="/cuisine/pizza" className="text-zinc-500 hover:text-green-400">Pizza</a></li>
+                <li><a href="/cuisine/chinese" className="text-zinc-500 hover:text-green-400">Chinese</a></li>
+                <li><a href="/cuisine/mexican" className="text-zinc-500 hover:text-green-400">Mexican</a></li>
+                <li><a href="/cuisine/japanese" className="text-zinc-500 hover:text-green-400">Japanese</a></li>
+                <li><a href="/cuisine/thai" className="text-zinc-500 hover:text-green-400">Thai</a></li>
+              </ul>
+            </div>
+            <div className="hidden md:block">
+              <h3 className="font-semibold text-zinc-400 uppercase tracking-wider text-xs mb-2">More Cuisines</h3>
+              <ul className="space-y-1">
+                <li><a href="/cuisine/indian" className="text-zinc-500 hover:text-green-400">Indian</a></li>
+                <li><a href="/cuisine/italian" className="text-zinc-500 hover:text-green-400">Italian</a></li>
+                <li><a href="/cuisine/american" className="text-zinc-500 hover:text-green-400">American</a></li>
+                <li><a href="/cuisine/halal" className="text-zinc-500 hover:text-green-400">Halal</a></li>
+                <li><a href="/cuisine/deli" className="text-zinc-500 hover:text-green-400">Deli</a></li>
+              </ul>
+            </div>
+            <div>
+              <h3 className="font-semibold text-zinc-400 uppercase tracking-wider text-xs mb-2">nodash</h3>
+              <ul className="space-y-1">
+                <li><a href="/about" className="text-zinc-500 hover:text-green-400">About</a></li>
+                <li><a href="/feedback" className="text-zinc-500 hover:text-green-400">Feedback</a></li>
+                <li><a href="mailto:afriedman1997@gmail.com" className="text-zinc-500 hover:text-green-400">List your restaurant</a></li>
+              </ul>
+            </div>
+          </div>
+          <div className="text-center text-zinc-600 text-xs border-t border-zinc-800/50 pt-4">
+            <p>
+              <span className="text-zinc-500">nodash</span><span className="text-green-400">.</span>
+              {" "}Order direct. Skip the cut.
+            </p>
+          </div>
         </div>
       </footer>
     </main>

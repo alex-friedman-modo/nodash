@@ -25,16 +25,16 @@
   
   <!-- Stats pills -->
   <rect x="80" y="490" width="160" height="44" rx="22" fill="#22c55e" fill-opacity="0.15"/>
-  <text x="160" y="518" text-anchor="middle" font-family="system-ui, -apple-system, Helvetica, Arial, sans-serif" font-size="18" font-weight="600" fill="#22c55e">🍕 Pizza 891</text>
+  <text x="160" y="518" text-anchor="middle" font-family="system-ui, -apple-system, Helvetica, Arial, sans-serif" font-size="18" font-weight="600" fill="#22c55e">Pizza · 891</text>
   
   <rect x="260" y="490" width="180" height="44" rx="22" fill="#22c55e" fill-opacity="0.15"/>
-  <text x="350" y="518" text-anchor="middle" font-family="system-ui, -apple-system, Helvetica, Arial, sans-serif" font-size="18" font-weight="600" fill="#22c55e">🌮 Mexican 381</text>
+  <text x="350" y="518" text-anchor="middle" font-family="system-ui, -apple-system, Helvetica, Arial, sans-serif" font-size="18" font-weight="600" fill="#22c55e">Mexican · 381</text>
   
   <rect x="460" y="490" width="180" height="44" rx="22" fill="#22c55e" fill-opacity="0.15"/>
-  <text x="550" y="518" text-anchor="middle" font-family="system-ui, -apple-system, Helvetica, Arial, sans-serif" font-size="18" font-weight="600" fill="#22c55e">🥡 Chinese 347</text>
+  <text x="550" y="518" text-anchor="middle" font-family="system-ui, -apple-system, Helvetica, Arial, sans-serif" font-size="18" font-weight="600" fill="#22c55e">Chinese · 347</text>
   
-  <rect x="660" y="490" width="180" height="44" rx="22" fill="#22c55e" fill-opacity="0.15"/>
-  <text x="750" y="518" text-anchor="middle" font-family="system-ui, -apple-system, Helvetica, Arial, sans-serif" font-size="18" font-weight="600" fill="#22c55e">🍜 Thai 175</text>
+  <rect x="660" y="490" width="160" height="44" rx="22" fill="#22c55e" fill-opacity="0.15"/>
+  <text x="740" y="518" text-anchor="middle" font-family="system-ui, -apple-system, Helvetica, Arial, sans-serif" font-size="18" font-weight="600" fill="#22c55e">Thai · 175</text>
   
   <!-- Bottom bar -->
   <rect x="0" y="580" width="1200" height="50" fill="#22c55e" fill-opacity="0.08"/>

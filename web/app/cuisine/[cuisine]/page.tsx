@@ -1,9 +1,21 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import type { Metadata } from "next";
-import { getRestaurants, getDb } from "@/lib/db";
+import { getDb, getRestaurants } from "@/lib/db";
 import RestaurantCard from "@/components/RestaurantCard";
-import SearchBar from "@/components/SearchBar";
+
+const CUISINE_SLUGS: Record<string, string> = {
+  pizza: "Pizza",
+  chinese: "Chinese",
+  mexican: "Mexican",
+  japanese: "Japanese",
+  thai: "Thai",
+  indian: "Indian",
+  italian: "Italian",
+  american: "American",
+  halal: "Halal",
+  deli: "Deli",
+};
 
 const BOROUGH_SLUGS: Record<string, string> = {
   manhattan: "Manhattan",
@@ -13,107 +25,99 @@ const BOROUGH_SLUGS: Record<string, string> = {
   "staten-island": "Staten Island",
 };
 
-// Reverse map for linking
 const BOROUGH_TO_SLUG: Record<string, string> = Object.fromEntries(
   Object.entries(BOROUGH_SLUGS).map(([slug, name]) => [name, slug])
 );
 
-export { BOROUGH_TO_SLUG };
-
-function getBoroughName(slug: string): string | null {
-  return BOROUGH_SLUGS[slug] ?? null;
+function getCuisineName(slug: string): string | null {
+  return CUISINE_SLUGS[slug] ?? null;
 }
 
-function getTopCuisinesInBorough(borough: string): { cuisine: string; count: number }[] {
+function getBoroughBreakdown(cuisine: string): { borough: string; count: number }[] {
   const db = getDb();
   return db
     .prepare(
-      `SELECT cuisine_label AS cuisine, COUNT(*) AS count
+      `SELECT borough, COUNT(*) AS count
        FROM restaurants
-       WHERE direct_delivery = 1 AND borough = ? AND cuisine_label IS NOT NULL
-       GROUP BY cuisine_label
-       ORDER BY count DESC
-       LIMIT 10`
+       WHERE direct_delivery = 1 AND cuisine_label = ?
+       GROUP BY borough
+       ORDER BY count DESC`
     )
-    .all(borough) as { cuisine: string; count: number }[];
+    .all(cuisine) as { borough: string; count: number }[];
+}
+
+function getCuisineTotal(cuisine: string): number {
+  const db = getDb();
+  const row = db
+    .prepare(
+      `SELECT COUNT(*) AS count FROM restaurants
+       WHERE direct_delivery = 1 AND cuisine_label = ?`
+    )
+    .get(cuisine) as { count: number };
+  return row.count;
 }
 
 export function generateStaticParams() {
-  return Object.keys(BOROUGH_SLUGS).map((borough) => ({ borough }));
+  return Object.keys(CUISINE_SLUGS).map((cuisine) => ({ cuisine }));
 }
 
 export async function generateMetadata({
   params,
 }: {
-  params: Promise<{ borough: string }>;
+  params: Promise<{ cuisine: string }>;
 }): Promise<Metadata> {
-  const { borough: slug } = await params;
-  const name = getBoroughName(slug);
+  const { cuisine: slug } = await params;
+  const name = getCuisineName(slug);
   if (!name) return {};
 
   return {
-    title: `Direct Delivery Restaurants in ${name} | nodash`,
-    description: `Browse ${name} restaurants that deliver direct — no DoorDash, no Uber Eats, no middleman fees. Order straight from your favorite ${name} spots.`,
+    title: `${name} Restaurants in NYC That Deliver Direct | nodash`,
+    description: `Find ${name} restaurants across NYC with direct delivery. No DoorDash, no Uber Eats — order straight from the restaurant. Browse by borough.`,
     openGraph: {
-      title: `${name} Restaurants That Deliver Direct | nodash`,
-      description: `Skip the apps. Find ${name} restaurants with direct delivery — your money goes straight to the restaurant.`,
-      url: `https://nodash.nyc/${slug}`,
+      title: `${name} Restaurants in NYC | nodash`,
+      description: `${name} delivery without the apps. Find NYC ${name.toLowerCase()} spots that deliver direct.`,
+      url: `https://nodash.nyc/cuisine/${slug}`,
     },
   };
 }
 
 export const dynamic = "force-dynamic";
 
-const CUISINE_TO_SLUG: Record<string, string> = {
-  Pizza: "pizza",
-  Mexican: "mexican",
-  Chinese: "chinese",
-  Japanese: "japanese",
-  Thai: "thai",
-  Indian: "indian",
-  Italian: "italian",
-  American: "american",
-  Halal: "halal",
-  Deli: "deli",
-};
-
-export default async function BoroughPage({
+export default async function CuisinePage({
   params,
   searchParams,
 }: {
-  params: Promise<{ borough: string }>;
-  searchParams: Promise<{ search?: string; cuisine?: string; page?: string }>;
+  params: Promise<{ cuisine: string }>;
+  searchParams: Promise<{ page?: string; borough?: string }>;
 }) {
-  const { borough: slug } = await params;
-  const boroughName = getBoroughName(slug);
-  if (!boroughName) notFound();
+  const { cuisine: slug } = await params;
+  const cuisineName = getCuisineName(slug);
+  if (!cuisineName) notFound();
 
   const sp = await searchParams;
-  const search = sp.search || "";
-  const cuisine = sp.cuisine || "";
+  const filterBorough = sp.borough || "";
   const page = parseInt(sp.page || "1");
   const limit = 24;
   const offset = (page - 1) * limit;
 
+  const totalAll = getCuisineTotal(cuisineName);
+  const boroughBreakdown = getBoroughBreakdown(cuisineName);
+
   const { restaurants, total } = getRestaurants({
-    borough: boroughName,
-    search: search || undefined,
-    cuisine: cuisine || undefined,
+    cuisine: cuisineName,
+    borough: filterBorough || undefined,
     limit,
     offset,
   });
 
-  const topCuisines = getTopCuisinesInBorough(boroughName);
   const totalPages = Math.ceil(total / limit);
-  const isFiltering = !!search || !!cuisine;
 
   function paginationUrl(p: number) {
     const params = new URLSearchParams();
-    if (search) params.set("search", search);
-    if (cuisine) params.set("cuisine", cuisine);
+    if (filterBorough) params.set("borough", filterBorough);
     params.set("page", String(p));
     const qs = params.toString();
-    return `/${slug}${qs ? `?${qs}` : ""}`;
+    return `/cuisine/${slug}${qs ? `?${qs}` : ""}`;
   }
 
   return (
@@ -137,42 +141,50 @@ export default async function BoroughPage({
           <div className="flex items-center gap-2 text-sm text-zinc-500 mb-2">
             <Link href="/" className="hover:text-zinc-300">Home</Link>
             <span>/</span>
-            <span className="text-zinc-300">{boroughName}</span>
+            <span className="text-zinc-300">{cuisineName}</span>
           </div>
           <h1 className="text-2xl md:text-4xl font-bold tracking-tight leading-snug">
-            {boroughName} Restaurants That Deliver Direct
+            {cuisineName} Restaurants in NYC That Deliver Direct
             <span className="text-green-400">.</span>
           </h1>
           <p className="mt-2 text-sm md:text-base text-zinc-400">
-            {total.toLocaleString()} restaurant{total !== 1 ? "s" : ""} in {boroughName} with direct delivery — no apps, no fees, no middleman.
+            {totalAll.toLocaleString()} {cuisineName.toLowerCase()} restaurant{totalAll !== 1 ? "s" : ""} across NYC with direct delivery — no apps, no fees.
           </p>
         </div>
       </section>
 
-      {/* Search */}
-      <section className="sticky top-0 z-10 bg-zinc-950/95 backdrop-blur-sm border-b border-zinc-800/50">
-        <div className="max-w-5xl mx-auto px-4 py-2.5">
-          <SearchBar initialSearch={search} basePath={`/${slug}`} />
-        </div>
-      </section>
-
-      {/* Top Cuisines */}
-      {topCuisines.length > 0 && !isFiltering && (
+      {/* Borough Breakdown */}
+      {boroughBreakdown.length > 0 && (
         <section className="max-w-5xl mx-auto px-4 py-4">
           <h2 className="text-sm font-semibold text-zinc-400 uppercase tracking-wider mb-3">
-            Popular in {boroughName}
+            {cuisineName} by Borough
           </h2>
           <div className="flex flex-wrap gap-2">
-            {topCuisines.map((c) => {
-              const cuisineSlug = CUISINE_TO_SLUG[c.cuisine];
+            <Link
+              href={`/cuisine/${slug}`}
+              className={`inline-flex items-center gap-1.5 border rounded-full px-3 py-1.5 text-sm transition-colors ${
+                !filterBorough
+                  ? "bg-green-500/10 border-green-500/30 text-green-400"
+                  : "bg-zinc-900 border-zinc-800 hover:border-green-500/50 hover:text-green-400"
+              }`}
+            >
+              All
+              <span className="text-xs opacity-60">{totalAll}</span>
+            </Link>
+            {boroughBreakdown.map((b) => {
+              const bSlug = BOROUGH_TO_SLUG[b.borough];
               return (
                 <Link
-                  key={c.cuisine}
-                  href={cuisineSlug ? `/cuisine/${cuisineSlug}` : `/${slug}?cuisine=${encodeURIComponent(c.cuisine)}`}
-                  className="inline-flex items-center gap-1.5 bg-zinc-900 border border-zinc-800 rounded-full px-3 py-1.5 text-sm hover:border-green-500/50 hover:text-green-400 transition-colors"
+                  key={b.borough}
+                  href={`/cuisine/${slug}?borough=${encodeURIComponent(b.borough)}`}
+                  className={`inline-flex items-center gap-1.5 border rounded-full px-3 py-1.5 text-sm transition-colors ${
+                    filterBorough === b.borough
+                      ? "bg-green-500/10 border-green-500/30 text-green-400"
+                      : "bg-zinc-900 border-zinc-800 hover:border-green-500/50 hover:text-green-400"
+                  }`}
                 >
-                  {c.cuisine}
-                  <span className="text-zinc-600 text-xs">{c.count}</span>
+                  {b.borough}
+                  <span className="text-xs opacity-60">{b.count}</span>
                 </Link>
               );
             })}
@@ -181,15 +193,11 @@ export default async function BoroughPage({
       )}
 
       {/* Results count */}
-      <div className="max-w-5xl mx-auto px-4 py-2 flex items-center justify-between">
+      <div className="max-w-5xl mx-auto px-4 py-2">
         <p className="text-xs text-zinc-500">
           {total.toLocaleString()} result{total !== 1 ? "s" : ""}
-          {cuisine ? ` · ${cuisine}` : ""}
-          {search ? ` · "${search}"` : ""}
+          {filterBorough ? ` in ${filterBorough}` : ""}
         </p>
-        {isFiltering && (
-          <a href={`/${slug}`} className="text-xs text-green-400 hover:underline">Clear filters</a>
-        )}
       </div>
 
       {/* Restaurant List */}
@@ -204,9 +212,9 @@ export default async function BoroughPage({
           <div className="text-center py-16">
             <p className="text-xl text-zinc-400">No restaurants found</p>
             <p className="text-sm text-zinc-500 mt-2">
-              Try a different search or{" "}
-              <a href={`/${slug}`} className="text-green-400 hover:underline">
-                clear filters
+              Try{" "}
+              <a href={`/cuisine/${slug}`} className="text-green-400 hover:underline">
+                viewing all boroughs
               </a>
             </p>
           </div>
@@ -238,19 +246,19 @@ export default async function BoroughPage({
         )}
       </section>
 
-      {/* Other Boroughs */}
+      {/* Other Cuisines */}
       <section className="border-t border-zinc-800/50">
         <div className="max-w-5xl mx-auto px-4 py-8">
           <h2 className="text-sm font-semibold text-zinc-400 uppercase tracking-wider mb-3">
-            Other Boroughs
+            Other Cuisines
           </h2>
           <div className="flex flex-wrap gap-2">
-            {Object.entries(BOROUGH_SLUGS)
+            {Object.entries(CUISINE_SLUGS)
               .filter(([s]) => s !== slug)
               .map(([s, name]) => (
                 <Link
                   key={s}
-                  href={`/${s}`}
+                  href={`/cuisine/${s}`}
                   className="bg-zinc-900 border border-zinc-800 rounded-lg px-4 py-2 text-sm hover:border-green-500/50 hover:text-green-400 transition-colors"
                 >
                   {name}
