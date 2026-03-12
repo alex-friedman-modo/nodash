@@ -15,7 +15,6 @@
 
 ### Launch Blockers
 - [ ] Mobile test pass — verify tap-to-call, photo loading, map on real device
-- [ ] Update favicon for new warm color scheme (currently green "n", needs coral)
 
 ### Post-Launch
 - [ ] Structured data (JSON-LD for local business listings)
@@ -24,7 +23,12 @@
 - [ ] Blog content for SEO ("How much does DoorDash charge restaurants?")
 - [ ] Light/dark mode toggle (currently light only)
 
-### Data Quality
+### Data Quality — IN PROGRESS
+- [ ] **Delivery details scraper** — scraping Toast/Slice/ChowNow/Sauce pages for fee/min/radius (Opus agent running)
+  - Currently: 12% have delivery fee, 6% have minimums — embarrassing for a delivery directory
+  - 1,507 platform restaurants, most have structured ordering pages with this data
+- [ ] LLM re-extraction for delivery fee/min from raw_text_preview (2,611 restaurants)
+- [ ] Find missing order URLs for platform restaurants (654 without URLs)
 - [ ] 881 `extracted_llm_uncertain` restaurants — show with "unverified" badge or hide?
 - [ ] Re-scrape `http_404` restaurants with bare domain (strip UTM/paths)
 - [ ] AI voice calling pipeline (Bland.ai) for 1,611 `call_needed` + 1,518 no-website restaurants (~$217)
@@ -101,6 +105,10 @@
 - **No website (need calls):** 1,518
 - **Uncertain (LLM medium):** 881
 - **DB version:** v0.1.3 (photos + cuisine labels)
+- **Delivery fee coverage:** 397/3,067 (12%) — 198 free
+- **Delivery minimum coverage:** 197/3,067 (6%)
+- **Delivery radius coverage:** 519/3,067 (16%)
+- **Platform breakdown:** Slice 578, Toast 398, Sauce 161, ChowNow 159, Menufy 105
 
 ## 🧠 DECISIONS LOG
 
