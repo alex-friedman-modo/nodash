@@ -1,107 +1,124 @@
 # ROADMAP.md — Pabu's NoDash Task Tracker
 
-**Read this every session. Update it every session. This is your brain.**
+**Read this every session. Update it after every change. This is your brain.**
 
 ---
 
 ## 🔥 BLOCKED ON ALEX (flesh sack tasks)
 
-- [ ] Buy domain (`nodash.nyc` or alternative)
+- [ ] Buy domain (`nodash.nyc` or alternative) — Railway domains broken, try Namecheap/Cloudflare
 - [ ] Railway: add custom domain once purchased
-- [ ] Approve Twitter launch thread before posting (it's Alex's account)
+- [ ] Approve Twitter launch thread before posting (Alex's account)
 - [ ] Approve Reddit posts before posting (Alex's identity)
-
-## 🏗️ IN PROGRESS
-
-- [ ] Waiting for Railway deploys to land with latest code
 
 ## 📋 TODO — Engineering
 
 ### Launch Blockers
-- [ ] Add favicon + OG image
-- [ ] Mobile test pass — make sure phone tap-to-call works
-- [ ] Fix broken `online_order_url` entries (Opus agent running)
+- [ ] Mobile test pass — verify tap-to-call, photo loading, map on real device
+- [ ] Update favicon for new warm color scheme (currently green "n", needs coral)
 
-### Post-Launch Engineering
-- [ ] Neighborhood pages (`/brooklyn/park-slope`, `/queens/astoria`, etc.)
-- [ ] Borough landing pages with SEO meta from launch plan
+### Post-Launch
 - [ ] Structured data (JSON-LD for local business listings)
 - [ ] Search improvements: debounced live search, fuzzy matching
 - [ ] Filter by delivery fee (free / under $5 / any)
-- [ ] Blog content for SEO (e.g. "How much does DoorDash charge restaurants?")
+- [ ] Blog content for SEO ("How much does DoorDash charge restaurants?")
+- [ ] Light/dark mode toggle (currently light only)
 
 ### Data Quality
-- [ ] Clean up 881 `extracted_llm_uncertain` restaurants — show with "unverified" badge or hide?
+- [ ] 881 `extracted_llm_uncertain` restaurants — show with "unverified" badge or hide?
 - [ ] Re-scrape `http_404` restaurants with bare domain (strip UTM/paths)
-- [ ] Verify borough counts match actual data
+- [ ] AI voice calling pipeline (Bland.ai) for 1,611 `call_needed` + 1,518 no-website restaurants (~$217)
 
 ### Future
 - [ ] Supabase migration (schema + script ready in `supabase/` and `pipeline/`)
-- [ ] ElevenLabs + Twilio calling pipeline for remaining 1,630 `call_needed`
 - [ ] Crowdsource verification — let users confirm/correct delivery info
 - [ ] Restaurant claim flow — let owners update their listing
+- [ ] Favorites (localStorage, no accounts)
 
 ## ✅ DONE
 
+### Data Pipeline
 - [x] Google Places API data pull — 7,060 restaurants, all 5 boroughs
 - [x] 3-stage scraping pipeline (URL triage → fetch+regex → LLM)
-- [x] Grok LLM first pass on all restaurants with websites
-- [x] Gemini 3 Flash re-verification of uncertain + failed restaurants
+- [x] Grok + Gemini LLM passes on all restaurants
 - [x] Playwright SPA scraper — 50 new direct delivery found
 - [x] 3,067 restaurants confirmed direct delivery
-- [x] Next.js frontend — homepage, search, borough tabs, restaurant detail pages
-- [x] Local SQLite serving via better-sqlite3
-- [x] Launch plan: copy, SEO keywords, meta tags, Reddit/Twitter drafts (`docs/launch-plan.md`)
-- [x] Supabase schema + migration script (ready but not deployed)
-- [x] **DEPLOYED ON RAILWAY** — `https://web-production-638bc.up.railway.app` ✅
-- [x] Railway: project created, GitHub connected, volume at `/data`, DB auto-downloaded
-- [x] About page with launch copy
-- [x] Sitemap.xml (dynamic, API route)
-- [x] robots.txt
-- [x] Price level display fixed (`PRICE_LEVEL_MODERATE` → `$$`)
-- [x] Cuisine filter dropdown (Pizza, Chinese, Thai, etc.)
-- [x] Green "Order Online" button on cards (1,908 restaurants)
-- [x] Phone button as secondary CTA
-- [x] Search by neighborhood name
-- [x] Feedback page at `/feedback`
-- [x] Nav bar with About + Feedback links
-- [x] Split formatters from db.ts for client component compatibility
-- [x] Homepage redesign v2 — compact hero, emoji cards, warmer copy
-- [x] SVG favicon (green "n")
-- [x] Neighborhood alias search — Park Slope→87, Williamsburg→161, Astoria→131
-- [x] Cuisine labels — merged categories (Pizza→891, Japanese+Sushi+Ramen→303)
-- [x] Smart sorting — online-order-first, then rating×reviews
-- [x] Zip code search — 11215→62 results
-- [x] PWA manifest for home screen install
 - [x] Cleaned 854 broken order URLs
-- [x] Feedback page at /feedback
+- [x] Cuisine labels added to DB (`cuisine_label` column)
+- [x] Google Places photos fetched — 3,062/3,067 have `photo_url`
+
+### Frontend — Core
+- [x] Next.js 16 frontend — homepage, search, restaurant detail pages
+- [x] SQLite served via better-sqlite3 (readonly) on Railway volume
+- [x] Deployed on Railway — `https://web-production-638bc.up.railway.app`
+- [x] DB delivery via GitHub release + `ensure-db.sh` (v0.1.3)
+
+### Frontend — Search & Filters
+- [x] Zip code search (11215 → 62 results)
+- [x] Neighborhood alias search (Park Slope → 87, Williamsburg → 161, Astoria → 131)
+- [x] Cuisine filter using `cuisine_label` (merged: Pizza→891, Japanese+Sushi+Ramen→303)
+- [x] Borough tabs
+- [x] Smart sorting — online-order-first, then rating × review_count
+- [x] "Near me" geolocation button + distance-based sorting
+
+### Frontend — Design
+- [x] **Warm light theme** — cream bg (#FDFBF7), coral accent (#E85D3A), white cards
+- [x] Mobile-first redesign — photo-left cards, compact hero, horizontal scroll filters
+- [x] Restaurant photos on cards (thumbnails) + detail pages (hero)
+- [x] Descriptions on cards (editorial_summary / generative_summary)
+- [x] 🔥 Popular badges (500+ reviews)
+- [x] OG image — "Your neighborhood delivers. Free." (1200x630 PNG)
+- [x] Twitter card (summary_large_image)
+- [x] SVG favicon + PWA manifest
+
+### Frontend — Map
+- [x] Interactive Leaflet map with CartoDB dark tiles + green markers
+- [x] Map upgraded: `/api/map-pins` returns ALL 3,067 restaurants
+- [x] Marker clustering (leaflet.markercluster)
+- [x] Photos + order buttons in map popups
+- [x] List/Map view toggle
+
+### Frontend — SEO
+- [x] Borough landing pages (`/manhattan`, `/brooklyn`, etc.)
+- [x] Cuisine landing pages (`/cuisine/pizza`, `/cuisine/chinese`, etc.)
+- [x] Dynamic sitemap.xml with all pages
+- [x] Internal linking (footer, breadcrumbs, cross-links)
+- [x] robots.txt
+- [x] Meta tags + SEO keywords
+
+### Frontend — Other
+- [x] About page
+- [x] Feedback page at `/feedback`
+- [x] Split formatters.ts (client-safe) from db.ts (server-only)
 
 ## 📊 KEY METRICS
 
 - **Total restaurants in DB:** 7,060
 - **Confirmed direct delivery:** 3,067 (43%)
-- **With online order URL:** 1,908 (62% of confirmed)
-- **Call needed:** 1,630
-- **No website (need calls):** 1,559
+- **With online order URL:** 1,054 (after cleanup)
+- **With photos:** 3,062
+- **Call needed:** 1,611
+- **No website (need calls):** 1,518
 - **Uncertain (LLM medium):** 881
-- **Fetch failed:** 305
+- **DB version:** v0.1.3 (photos + cuisine labels)
 
 ## 🧠 DECISIONS LOG
 
-- **Brand:** Dark mode, "Order direct. Skip the cut.", honest/direct tone, NYC energy
+- **Brand:** Warm cream + coral, "Your neighborhood delivers. Free.", honest/direct NYC energy
+- **Color scheme:** #FDFBF7 bg, #E85D3A accent, #FFFFFF cards, #8C8478 muted (was dark+green, changed 3/12)
 - **Hosting:** Railway — Nixpacks, persistent volume for SQLite, auto-deploy from GitHub
 - **Railway URL:** `https://web-production-638bc.up.railway.app`
 - **Railway project ID:** `f68e65e1-53f5-4bc4-87d6-8c6e6c3472b0`
-- **Domain:** TBD — recommending `nodash.nyc`
-- **Launch scope:** All NYC (not Park Slope first)
-- **DB:** SQLite on Railway volume, downloaded from GitHub release v0.1.0 on first boot
-- **Alex's role:** Flesh sack for domain/approvals, Pabu handles everything else
+- **Domain:** TBD — `nodash.nyc` preferred, Railway domains broken
+- **Launch scope:** All NYC (not neighborhood pilot)
+- **DB:** SQLite on Railway volume, downloaded from GitHub release on boot
 - **Architecture:** lib/formatters.ts (client-safe) + lib/db.ts (server-only with sqlite)
+- **Calling plan:** Bland.ai for phone verification (~$0.07/min, ~$217 for full dataset)
 
 ## 🔥 PABU'S MANDATE
 
-**You are the solo founder. Your job is to get this thing ready and out there. Triage bugs. Market like hell. You are the leader.**
+**You are the solo founder. Ship fast. Market like hell. Update this file after every change.**
 
 ---
 
-*Last updated: 2026-03-11 15:18 UTC*
+*Last updated: 2026-03-12 18:11 UTC*
