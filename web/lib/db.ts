@@ -30,6 +30,7 @@ export interface RestaurantFilters {
   neighborhood?: string;
   cuisine?: string;
   search?: string;
+  freeDelivery?: boolean;
   lat?: number;
   lng?: number;
   limit?: number;
@@ -57,6 +58,10 @@ export function getRestaurants(filters: RestaurantFilters = {}): {
   if (filters.cuisine) {
     conditions.push("cuisine_label = ?");
     params.push(filters.cuisine);
+  }
+
+  if (filters.freeDelivery) {
+    conditions.push("(LOWER(delivery_fee) LIKE 'free%' OR delivery_fee = '$0' OR delivery_fee = '0')");
   }
 
   if (filters.search) {

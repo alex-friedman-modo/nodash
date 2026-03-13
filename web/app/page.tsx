@@ -2,6 +2,7 @@ import { getRestaurants, getBoroughCounts, getTotalDirectDelivery, getCuisineCou
 import SearchBar from "@/components/SearchBar";
 import BoroughTabs from "@/components/BoroughTabs";
 import CuisineFilter from "@/components/CuisineFilter";
+import FreeDeliveryToggle from "@/components/FreeDeliveryToggle";
 import NearMeButton from "@/components/NearMeButton";
 import RestaurantSection from "@/components/RestaurantSection";
 import CommunityProgress from "@/components/CommunityProgress";
@@ -11,12 +12,13 @@ export const dynamic = "force-dynamic";
 export default async function Home({
   searchParams,
 }: {
-  searchParams: Promise<{ borough?: string; search?: string; cuisine?: string; page?: string; lat?: string; lng?: string }>;
+  searchParams: Promise<{ borough?: string; search?: string; cuisine?: string; page?: string; lat?: string; lng?: string; free?: string }>;
 }) {
   const params = await searchParams;
   const borough = params.borough || "All";
   const search = params.search || "";
   const cuisine = params.cuisine || "";
+  const freeDelivery = params.free === "1";
   const page = parseInt(params.page || "1");
   const lat = params.lat ? parseFloat(params.lat) : undefined;
   const lng = params.lng ? parseFloat(params.lng) : undefined;
@@ -34,6 +36,7 @@ export default async function Home({
       borough: borough === "All" ? undefined : borough,
       search: search || undefined,
       cuisine: cuisine || undefined,
+      freeDelivery: freeDelivery || undefined,
       lat,
       lng,
       limit,
@@ -48,7 +51,7 @@ export default async function Home({
     console.error("DB error on homepage:", e);
   }
 
-  const isFiltering = search || borough !== "All" || cuisine || lat;
+  const isFiltering = search || borough !== "All" || cuisine || lat || freeDelivery;
   const totalPages = Math.ceil(total / limit);
 
   return (
@@ -96,6 +99,7 @@ export default async function Home({
           </div>
           <div className="flex items-center gap-2 mt-2 overflow-x-auto pb-1 scrollbar-hide -mx-4 px-4">
             <CuisineFilter cuisines={cuisinesList} activeCuisine={cuisine} />
+            <FreeDeliveryToggle active={freeDelivery} />
             <div className="h-4 w-px flex-shrink-0" style={{ background: "var(--card-border)" }} />
             <BoroughTabs
               activeBoroughs={borough}
