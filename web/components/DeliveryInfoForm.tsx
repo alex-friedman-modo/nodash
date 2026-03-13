@@ -1,232 +1,397 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
-type FreeDelivery = "yes" | "over_minimum" | "no" | null;
+type Step = "collapsed" | "free_delivery" | "fee_amount" | "delivery_area" | "success" | "name_prompt";
+
+function getContributorId(): string {
+  if (typeof window === "undefined") return "";
+  let id = localStorage.getItem("nodash_contributor_id");
+  if (!id) {
+    id = crypto.randomUUID();
+    localStorage.setItem("nodash_contributor_id", id);
+  }
+  return id;
+}
+
+function getContributionCount(): number {
+  if (typeof window === "undefined") return 0;
+  return parseInt(localStorage.getItem("nodash_contributions") || "0", 10);
+}
+
+function incrementContributions(): number {
+  const count = getContributionCount() + 1;
+  localStorage.setItem("nodash_contributions", String(count));
+  return count;
+}
+
+function getDisplayName(): string {
+  if (typeof window === "undefined") return "";
+  return localStorage.getItem("nodash_display_name") || "";
+}
+
+function setDisplayNameStorage(name: string) {
+  localStorage.setItem("nodash_display_name", name);
+}
+
+function hasSetNameBefore(): boolean {
+  if (typeof window === "undefined") return false;
+  return localStorage.getItem("nodash_name_prompted") === "true";
+}
+
+function markNamePrompted() {
+  localStorage.setItem("nodash_name_prompted", "true");
+}
 
 export default function DeliveryInfoForm({
   placeId,
+  restaurantName,
   hasDeliveryInfo,
 }: {
   placeId: string;
+  restaurantName: string;
   hasDeliveryInfo: boolean;
 }) {
-  const [expanded, setExpanded] = useState(false);
-  const [freeDelivery, setFreeDelivery] = useState<FreeDelivery>(null);
-  const [deliveryFee, setDeliveryFee] = useState("");
-  const [deliveryMinimum, setDeliveryMinimum] = useState("");
+  const [step, setStep] = useState<Step>("collapsed");
+  const [freeDelivery, setFreeDelivery] = useState<string | null>(null);
+  const [deliveryFee, setDeliveryFee] = useState<string | null>(null);
   const [deliveryRadius, setDeliveryRadius] = useState("");
-  const [deliveryHours, setDeliveryHours] = useState("");
-  const [comment, setComment] = useState("");
-  const [status, setStatus] = useState<"idle" | "submitting" | "success" | "error" | "ratelimit">("idle");
-  const [errorMsg, setErrorMsg] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [contributions, setContributions] = useState(0);
+  const [error, setError] = useState("");
+  const [nameInput, setNameInput] = useState("");
+  const [nameSaved, setNameSaved] = useState(false);
+  const [nameError, setNameError] = useState("");
 
-  const handleSubmit = async () => {
-    if (!freeDelivery && !deliveryRadius && !deliveryHours && !comment) {
-      setErrorMsg("Please fill in at least one field.");
-      setStatus("error");
-      return;
-    }
+  useEffect(() => {
+    setContributions(getContributionCount());
+    setNameInput(getDisplayName());
+  }, []);
 
-    setStatus("submitting");
-    setErrorMsg("");
+  const totalSteps = 3;
+  const currentStep =
+    step === "free_delivery" ? 1 :
+    step === "fee_amount" ? 2 :
+    step === "delivery_area" ? 3 : 0;
 
+  const doSubmit = async (data: Record<string, string | null>) => {
+    setSubmitting(true);
+    setError("");
     try {
       const res = await fetch("/api/submissions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           place_id: placeId,
-          free_delivery: freeDelivery,
-          delivery_fee: freeDelivery === "no" ? deliveryFee || null : freeDelivery === "yes" ? "Free" : null,
-          delivery_minimum: freeDelivery === "over_minimum" ? deliveryMinimum || null : null,
-          delivery_radius: deliveryRadius || null,
-          delivery_hours: deliveryHours || null,
-          comment: comment || null,
+          contributor_id: getContributorId(),
+          display_name: getDisplayName() || null,
+          ...data,
         }),
       });
 
       if (res.status === 429) {
-        setStatus("ratelimit");
-        return;
+        setError("Whoa, slow down! Try again in a bit.");
+        setSubmitting(false);
+        return false;
       }
-
       if (!res.ok) {
-        const data = await res.json();
-        setErrorMsg(data.error || "Something went wrong.");
-        setStatus("error");
-        return;
+        const d = await res.json();
+        setError(d.error || "Something went wrong.");
+        setSubmitting(false);
+        return false;
       }
 
-      setStatus("success");
+      const count = incrementContributions();
+      setContributions(count);
+      setSubmitting(false);
+      return true;
     } catch {
-      setErrorMsg("Network error. Please try again.");
-      setStatus("error");
+      setError("Network error. Please try again.");
+      setSubmitting(false);
+      return false;
     }
   };
 
-  if (status === "success") {
-    return (
-      <div className="mt-6 bg-green-500/10 border border-green-500/20 rounded-lg p-6 text-center">
-        <p className="text-green-400 font-medium text-lg">🎉 Thanks! We&apos;ll review and add this.</p>
-        <p className="text-zinc-500 text-sm mt-1">Your contribution helps everyone skip the middleman.</p>
-      </div>
-    );
-  }
+  const goToSuccessOrNamePrompt = () => {
+    // Show name prompt on first submission if they haven't set a name
+    if (!hasSetNameBefore() && !getDisplayName()) {
+      setStep("name_prompt");
+    } else {
+      setStep("success");
+    }
+  };
 
-  if (status === "ratelimit") {
-    return (
-      <div className="mt-6 bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-6 text-center">
-        <p className="text-yellow-400 font-medium">Slow down! Too many submissions.</p>
-        <p className="text-zinc-500 text-sm mt-1">Please try again in a bit.</p>
-      </div>
-    );
-  }
+  const handleFreeDelivery = async (answer: string) => {
+    setFreeDelivery(answer);
+    if (answer === "yes") {
+      const ok = await doSubmit({ free_delivery: "yes", delivery_fee: "Free" });
+      if (ok) goToSuccessOrNamePrompt();
+    } else if (answer === "fee") {
+      setStep("fee_amount");
+    } else {
+      // "not sure" — skip to delivery area
+      setStep("delivery_area");
+    }
+  };
 
-  if (!expanded) {
+  const handleFeeAmount = async (fee: string | null) => {
+    setDeliveryFee(fee);
+    const ok = await doSubmit({ free_delivery: "no", delivery_fee: fee });
+    if (ok) setStep("delivery_area");
+  };
+
+  const handleDeliveryArea = async () => {
+    if (deliveryRadius.trim()) {
+      const ok = await doSubmit({ delivery_radius: deliveryRadius.trim() });
+      if (ok) goToSuccessOrNamePrompt();
+    } else {
+      goToSuccessOrNamePrompt();
+    }
+  };
+
+  const handleSaveName = () => {
+    const name = nameInput.trim();
+    if (!name) {
+      // Skip
+      markNamePrompted();
+      setStep("success");
+      return;
+    }
+    if (name.length > 20) {
+      setNameError("Max 20 characters");
+      return;
+    }
+    if (!/^[a-zA-Z0-9 '.!?,-]+$/.test(name)) {
+      setNameError("Letters, numbers, and basic punctuation only");
+      return;
+    }
+    setDisplayNameStorage(name);
+    markNamePrompted();
+    setNameSaved(true);
+    setTimeout(() => setStep("success"), 800);
+  };
+
+  const ProgressDots = () => (
+    <div className="flex items-center justify-center gap-2 mb-4">
+      {Array.from({ length: totalSteps }).map((_, i) => (
+        <div
+          key={i}
+          className={`w-2 h-2 rounded-full transition-colors ${
+            i < currentStep
+              ? "bg-[var(--accent)]"
+              : i === currentStep
+              ? "bg-[var(--accent)] opacity-60"
+              : "bg-[var(--card-border)]"
+          }`}
+        />
+      ))}
+    </div>
+  );
+
+  // === COLLAPSED ===
+  if (step === "collapsed") {
     return (
       <div className="mt-6">
         <button
-          onClick={() => setExpanded(true)}
-          className="w-full bg-zinc-900 border border-zinc-800 hover:border-zinc-700 rounded-lg px-6 py-4 text-left transition-colors group"
+          onClick={() => setStep("free_delivery")}
+          className="w-full bg-[var(--accent-light)] border border-[var(--accent)]/20 hover:border-[var(--accent)]/40 rounded-lg px-6 py-4 text-left transition-all group"
         >
-          <span className="text-zinc-300 group-hover:text-white transition-colors">
+          <span className="text-[var(--accent)] font-medium group-hover:opacity-80 transition-opacity">
             {hasDeliveryInfo
-              ? "📝 Have an update to the delivery details?"
+              ? "📝 Have an update? Help us out!"
               : "📝 Know the delivery details? Help us out!"}
           </span>
+          {contributions > 0 && (
+            <span className="block text-xs text-[var(--muted)] mt-1">
+              🏆 You&apos;ve helped with {contributions} restaurant{contributions !== 1 ? "s" : ""}!
+            </span>
+          )}
         </button>
       </div>
     );
   }
 
-  const freeOptions: { value: FreeDelivery; label: string }[] = [
-    { value: "yes", label: "Yes, always free" },
-    { value: "over_minimum", label: "Free over $X" },
-    { value: "no", label: "Not free" },
-  ];
+  // === NAME PROMPT (after first submission) ===
+  if (step === "name_prompt") {
+    return (
+      <div className="mt-6 bg-[var(--card-bg)] border border-[var(--card-border)] rounded-lg p-6 text-center">
+        <p className="text-[var(--accent)] font-semibold text-lg">Thanks! 🎉</p>
+        <p className="text-[var(--muted)] text-sm mt-1 mb-4">
+          Want your name on the leaderboard?
+        </p>
+        {nameSaved ? (
+          <p className="text-[var(--accent)] font-medium">✓ Saved!</p>
+        ) : (
+          <>
+            <input
+              type="text"
+              value={nameInput}
+              onChange={(e) => { setNameInput(e.target.value); setNameError(""); }}
+              placeholder="Your name (max 20 chars)"
+              maxLength={20}
+              className="w-full bg-[var(--background)] border border-[var(--card-border)] rounded-lg px-4 py-3 text-[#1a1a1a] placeholder-[var(--muted-light)] focus:outline-none focus:border-[var(--accent)] transition-colors text-center"
+            />
+            {nameError && (
+              <p className="text-red-500 text-xs mt-1">{nameError}</p>
+            )}
+            <div className="flex gap-2 mt-3">
+              <button
+                onClick={handleSaveName}
+                className="flex-1 min-h-[44px] bg-[var(--accent)] hover:bg-[#d14e2f] text-white font-semibold rounded-lg px-4 py-2 transition-colors"
+              >
+                Save
+              </button>
+              <button
+                onClick={() => { markNamePrompted(); setStep("success"); }}
+                className="min-h-[44px] text-[var(--muted)] hover:text-[#1a1a1a] px-4 text-sm transition-colors"
+              >
+                Skip
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+    );
+  }
 
-  return (
-    <div className="mt-6 bg-zinc-900 border border-zinc-800 rounded-lg p-6">
-      <div className="flex items-center justify-between mb-5">
-        <h3 className="font-semibold text-lg text-white">Share Delivery Details</h3>
+  // === SUCCESS ===
+  if (step === "success") {
+    return (
+      <div className="mt-6 bg-[var(--accent-light)] border border-[var(--accent)]/20 rounded-lg p-6 text-center">
+        <p className="text-[var(--accent)] font-semibold text-lg">Thanks! 🎉 You just helped your neighborhood.</p>
+        <p className="text-[var(--muted)] text-sm mt-1">We&apos;ll review and add this info.</p>
+        {contributions > 0 && (
+          <p className="text-[var(--accent)] text-sm font-medium mt-3">
+            🏆 You&apos;ve helped with {contributions} restaurant{contributions !== 1 ? "s" : ""}!
+          </p>
+        )}
         <button
-          onClick={() => setExpanded(false)}
-          className="text-zinc-500 hover:text-zinc-300 text-sm"
+          onClick={() => {
+            setStep("collapsed");
+            setFreeDelivery(null);
+            setDeliveryFee(null);
+            setDeliveryRadius("");
+            setError("");
+          }}
+          className="mt-4 text-sm text-[var(--muted)] hover:text-[#1a1a1a] underline"
+        >
+          Add more details
+        </button>
+      </div>
+    );
+  }
+
+  // === QUESTION STEPS ===
+  return (
+    <div className="mt-6 bg-[var(--card-bg)] border border-[var(--card-border)] rounded-lg p-6 transition-all">
+      <div className="flex items-center justify-between mb-2">
+        <h3 className="font-semibold text-base text-[#1a1a1a]">Help us out</h3>
+        <button
+          onClick={() => { setStep("collapsed"); setError(""); }}
+          className="text-[var(--muted)] hover:text-[#1a1a1a] text-sm"
         >
           Cancel
         </button>
       </div>
 
-      {/* Free delivery toggle */}
-      <div className="mb-5">
-        <label className="text-xs text-zinc-500 uppercase tracking-wider block mb-2">
-          Free delivery?
-        </label>
-        <div className="flex flex-wrap gap-2">
-          {freeOptions.map((opt) => (
+      <ProgressDots />
+
+      {error && (
+        <p className="text-red-500 text-sm mb-3 text-center">{error}</p>
+      )}
+
+      {/* Step 1: Free delivery? */}
+      {step === "free_delivery" && (
+        <div className="space-y-3">
+          <p className="text-[#1a1a1a] font-medium text-center">
+            Does <span className="text-[var(--accent)]">{restaurantName}</span> offer free delivery?
+          </p>
+          <div className="flex flex-col gap-2">
             <button
-              key={opt.value}
-              onClick={() => setFreeDelivery(freeDelivery === opt.value ? null : opt.value)}
-              className={`px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
-                freeDelivery === opt.value
-                  ? "bg-green-500/20 text-green-400 border border-green-500/30"
-                  : "bg-zinc-800 text-zinc-400 border border-zinc-700 hover:border-zinc-600"
-              }`}
+              onClick={() => handleFreeDelivery("yes")}
+              disabled={submitting}
+              className="w-full min-h-[48px] bg-[var(--accent-light)] hover:bg-[var(--accent)] hover:text-white text-[var(--accent)] font-semibold rounded-lg px-4 py-3 text-base transition-colors disabled:opacity-50"
             >
-              {opt.label}
+              ✅ Yes, free!
             </button>
-          ))}
+            <button
+              onClick={() => handleFreeDelivery("fee")}
+              disabled={submitting}
+              className="w-full min-h-[48px] bg-[var(--card-bg)] border border-[var(--card-border)] hover:border-[var(--accent)] text-[#1a1a1a] font-medium rounded-lg px-4 py-3 text-base transition-colors disabled:opacity-50"
+            >
+              💰 There&apos;s a fee
+            </button>
+            <button
+              onClick={() => handleFreeDelivery("unsure")}
+              disabled={submitting}
+              className="w-full min-h-[48px] bg-[var(--card-bg)] border border-[var(--card-border)] hover:border-[var(--muted-light)] text-[var(--muted)] font-medium rounded-lg px-4 py-3 text-base transition-colors disabled:opacity-50"
+            >
+              🤷 Not sure
+            </button>
+          </div>
         </div>
-      </div>
+      )}
 
-      {/* Conditional: minimum input */}
-      {freeDelivery === "over_minimum" && (
-        <div className="mb-5">
-          <label className="text-xs text-zinc-500 uppercase tracking-wider block mb-2">
-            Minimum for free delivery
-          </label>
+      {/* Step 2: Fee amount */}
+      {step === "fee_amount" && (
+        <div className="space-y-3">
+          <p className="text-[#1a1a1a] font-medium text-center">
+            About how much is the delivery fee?
+          </p>
+          <div className="grid grid-cols-3 gap-2">
+            {["$1-2", "$3-4", "$5+"].map((fee) => (
+              <button
+                key={fee}
+                onClick={() => handleFeeAmount(fee)}
+                disabled={submitting}
+                className="min-h-[48px] bg-[var(--accent-light)] hover:bg-[var(--accent)] hover:text-white text-[var(--accent)] font-semibold rounded-lg px-3 py-3 text-base transition-colors disabled:opacity-50"
+              >
+                {fee}
+              </button>
+            ))}
+          </div>
+          <button
+            onClick={() => handleFeeAmount(null)}
+            disabled={submitting}
+            className="w-full min-h-[44px] text-[var(--muted)] hover:text-[#1a1a1a] text-sm transition-colors disabled:opacity-50"
+          >
+            Skip →
+          </button>
+        </div>
+      )}
+
+      {/* Step 3: Delivery area */}
+      {step === "delivery_area" && (
+        <div className="space-y-3">
+          <p className="text-[#1a1a1a] font-medium text-center">
+            Know the delivery area?
+          </p>
           <input
             type="text"
-            value={deliveryMinimum}
-            onChange={(e) => setDeliveryMinimum(e.target.value)}
-            placeholder="e.g. $15.00"
-            className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-3 text-white placeholder-zinc-600 focus:outline-none focus:border-zinc-500 transition-colors"
+            value={deliveryRadius}
+            onChange={(e) => setDeliveryRadius(e.target.value)}
+            placeholder="e.g. 2 miles, Park Slope, 10001"
+            className="w-full bg-[var(--background)] border border-[var(--card-border)] rounded-lg px-4 py-3 text-[#1a1a1a] placeholder-[var(--muted-light)] focus:outline-none focus:border-[var(--accent)] transition-colors"
           />
+          <div className="flex gap-2">
+            <button
+              onClick={handleDeliveryArea}
+              disabled={submitting}
+              className="flex-1 min-h-[48px] bg-[var(--accent)] hover:bg-[#d14e2f] text-white font-semibold rounded-lg px-4 py-3 text-base transition-colors disabled:opacity-50"
+            >
+              {submitting ? "Saving..." : deliveryRadius.trim() ? "Submit" : "Done"}
+            </button>
+            {!deliveryRadius.trim() && (
+              <button
+                onClick={() => goToSuccessOrNamePrompt()}
+                className="min-h-[48px] text-[var(--muted)] hover:text-[#1a1a1a] px-4 text-sm transition-colors"
+              >
+                Skip
+              </button>
+            )}
+          </div>
         </div>
       )}
-
-      {/* Conditional: fee input */}
-      {freeDelivery === "no" && (
-        <div className="mb-5">
-          <label className="text-xs text-zinc-500 uppercase tracking-wider block mb-2">
-            Delivery fee
-          </label>
-          <input
-            type="text"
-            value={deliveryFee}
-            onChange={(e) => setDeliveryFee(e.target.value)}
-            placeholder="e.g. $2.99"
-            className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-3 text-white placeholder-zinc-600 focus:outline-none focus:border-zinc-500 transition-colors"
-          />
-        </div>
-      )}
-
-      {/* Delivery area */}
-      <div className="mb-5">
-        <label className="text-xs text-zinc-500 uppercase tracking-wider block mb-2">
-          Delivery area
-        </label>
-        <input
-          type="text"
-          value={deliveryRadius}
-          onChange={(e) => setDeliveryRadius(e.target.value)}
-          placeholder="e.g. 2 miles, Park Slope, 10001-10010"
-          className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-3 text-white placeholder-zinc-600 focus:outline-none focus:border-zinc-500 transition-colors"
-        />
-      </div>
-
-      {/* Delivery hours */}
-      <div className="mb-5">
-        <label className="text-xs text-zinc-500 uppercase tracking-wider block mb-2">
-          Delivery hours
-        </label>
-        <input
-          type="text"
-          value={deliveryHours}
-          onChange={(e) => setDeliveryHours(e.target.value)}
-          placeholder="e.g. 11am-9pm daily"
-          className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-3 text-white placeholder-zinc-600 focus:outline-none focus:border-zinc-500 transition-colors"
-        />
-      </div>
-
-      {/* Notes */}
-      <div className="mb-5">
-        <label className="text-xs text-zinc-500 uppercase tracking-wider block mb-2">
-          Notes
-        </label>
-        <textarea
-          value={comment}
-          onChange={(e) => setComment(e.target.value)}
-          placeholder="Anything else helpful?"
-          rows={2}
-          className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-3 text-white placeholder-zinc-600 focus:outline-none focus:border-zinc-500 transition-colors resize-none"
-        />
-      </div>
-
-      {/* Error */}
-      {status === "error" && errorMsg && (
-        <p className="text-red-400 text-sm mb-4">{errorMsg}</p>
-      )}
-
-      {/* Submit */}
-      <button
-        onClick={handleSubmit}
-        disabled={status === "submitting"}
-        className="w-full bg-green-600 hover:bg-green-500 disabled:bg-zinc-700 disabled:text-zinc-500 text-white font-semibold rounded-lg px-6 py-3 text-lg transition-colors"
-      >
-        {status === "submitting" ? "Submitting..." : "Submit"}
-      </button>
     </div>
   );
 }

@@ -32,29 +32,29 @@ export default async function RestaurantPage({
   )}`;
 
   return (
-    <main className="min-h-screen bg-zinc-950 text-white">
+    <main className="min-h-screen bg-[var(--background)] text-[#1a1a1a]">
       <div className="max-w-3xl mx-auto px-4 py-8">
         {/* Breadcrumb */}
-        <div className="flex items-center gap-2 text-sm text-zinc-500 mb-8">
-          <Link href="/" className="hover:text-zinc-300">Home</Link>
+        <div className="flex items-center gap-2 text-sm text-[var(--muted-light)] mb-8">
+          <Link href="/" className="hover:text-[#1a1a1a]">Home</Link>
           <span>/</span>
           {r.borough && BOROUGH_TO_SLUG[r.borough] ? (
             <>
               <Link
                 href={`/${BOROUGH_TO_SLUG[r.borough]}`}
-                className="hover:text-zinc-300"
+                className="hover:text-[#1a1a1a]"
               >
                 {r.borough}
               </Link>
               <span>/</span>
             </>
           ) : null}
-          <span className="text-zinc-400 truncate max-w-[200px]">{r.name}</span>
+          <span className="text-[var(--muted)] truncate max-w-[200px]">{r.name}</span>
         </div>
 
         {/* Photo */}
         {r.photo_url && (
-          <div className="w-full h-48 md:h-64 rounded-xl overflow-hidden bg-zinc-800 mb-6">
+          <div className="w-full h-48 md:h-64 rounded-xl overflow-hidden bg-[var(--card-border)] mb-6">
             <img
               src={r.photo_url}
               alt={r.name}
@@ -67,18 +67,18 @@ export default async function RestaurantPage({
         <div className="flex items-start justify-between gap-4">
           <div>
             <h1 className="text-3xl md:text-4xl font-bold">{r.name}</h1>
-            <p className="text-zinc-400 mt-1">
+            <p className="text-[var(--muted)] mt-1">
               {cuisine} · {r.neighborhood}, {r.borough}
             </p>
           </div>
-          <span className="flex-shrink-0 inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-500/10 text-green-400 border border-green-500/20">
+          <span className="flex-shrink-0 inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-[var(--accent-light)] text-[var(--accent)] border border-[var(--accent)]">
             Direct Delivery ✓
           </span>
         </div>
 
         {/* Rating */}
         {r.rating && (
-          <div className="mt-3 text-sm text-zinc-400">
+          <div className="mt-3 text-sm text-[var(--muted)]">
             ⭐ {r.rating}
             {r.review_count
               ? ` · ${r.review_count.toLocaleString()} reviews`
@@ -88,7 +88,7 @@ export default async function RestaurantPage({
         )}
 
         {/* Delivery Info */}
-        <div className="mt-8 bg-zinc-900 border border-zinc-800 rounded-lg p-6">
+        <div className="mt-8 bg-[var(--card-bg)] border border-[var(--card-border)] rounded-lg p-6">
           <h2 className="font-semibold text-lg mb-4">Delivery Details</h2>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
             <InfoBlock
@@ -120,7 +120,7 @@ export default async function RestaurantPage({
           {r.phone && (
             <a
               href={`tel:${r.phone}`}
-              className="flex items-center justify-center gap-2 bg-green-600 hover:bg-green-500 text-white font-semibold rounded-lg px-6 py-3 text-lg transition-colors"
+              className="flex items-center justify-center gap-2 bg-[var(--accent)] hover:bg-[#d14e2f] text-white font-semibold rounded-lg px-6 py-3 text-lg transition-colors"
             >
               <Phone className="w-5 h-5" />
               {r.phone}
@@ -131,7 +131,7 @@ export default async function RestaurantPage({
               href={r.online_order_url}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center justify-center gap-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded-lg px-6 py-3 transition-colors"
+              className="flex items-center justify-center gap-2 bg-white border border-[var(--card-border)] text-[#1a1a1a] hover:bg-[var(--accent-light)] rounded-lg px-6 py-3 transition-colors"
             >
               <ExternalLink className="w-5 h-5" />
               Order Online
@@ -142,7 +142,7 @@ export default async function RestaurantPage({
               href={r.website}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center justify-center gap-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded-lg px-6 py-3 transition-colors"
+              className="flex items-center justify-center gap-2 bg-white border border-[var(--card-border)] text-[#1a1a1a] hover:bg-[var(--accent-light)] rounded-lg px-6 py-3 transition-colors"
             >
               <Globe className="w-5 h-5" />
               Visit Website
@@ -151,16 +151,16 @@ export default async function RestaurantPage({
         </div>
 
         {/* Address */}
-        <div className="mt-8 bg-zinc-900 border border-zinc-800 rounded-lg p-6">
+        <div className="mt-8 bg-[var(--card-bg)] border border-[var(--card-border)] rounded-lg p-6">
           <div className="flex items-start gap-3">
-            <MapPin className="w-5 h-5 text-zinc-500 mt-0.5 flex-shrink-0" />
+            <MapPin className="w-5 h-5 text-[var(--muted-light)] mt-0.5 flex-shrink-0" />
             <div>
-              <p className="text-zinc-300">{r.address}</p>
+              <p className="text-[#1a1a1a]">{r.address}</p>
               <a
                 href={mapsUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-sm text-green-400 hover:underline mt-1 inline-block"
+                className="text-sm text-[var(--accent)] hover:underline mt-1 inline-block"
               >
                 Open in Google Maps →
               </a>
@@ -170,9 +170,9 @@ export default async function RestaurantPage({
 
         {/* Summary */}
         {(r.editorial_summary || r.generative_summary) && (
-          <div className="mt-6 bg-zinc-900 border border-zinc-800 rounded-lg p-6">
+          <div className="mt-6 bg-[var(--card-bg)] border border-[var(--card-border)] rounded-lg p-6">
             <h2 className="font-semibold text-lg mb-2">About</h2>
-            <p className="text-zinc-400 text-sm leading-relaxed">
+            <p className="text-[var(--muted)] text-sm leading-relaxed">
               {r.editorial_summary || r.generative_summary}
             </p>
           </div>
@@ -181,6 +181,7 @@ export default async function RestaurantPage({
         {/* Crowdsource Delivery Info */}
         <DeliveryInfoForm
           placeId={r.place_id}
+          restaurantName={r.name}
           hasDeliveryInfo={!!(r.delivery_fee || r.delivery_minimum)}
         />
 
@@ -190,7 +191,7 @@ export default async function RestaurantPage({
             href={`mailto:afriedman1997@gmail.com?subject=nodash correction: ${encodeURIComponent(
               r.name
             )}&body=Restaurant: ${encodeURIComponent(r.name)}%0AWhat's wrong:%0A`}
-            className="text-sm text-zinc-500 hover:text-zinc-300"
+            className="text-sm text-[var(--muted-light)] hover:text-[#1a1a1a]"
           >
             Is this info wrong? Let us know →
           </a>
@@ -203,8 +204,8 @@ export default async function RestaurantPage({
 function InfoBlock({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <p className="text-xs text-zinc-500 uppercase tracking-wider">{label}</p>
-      <p className="text-white font-medium mt-0.5">{value}</p>
+      <p className="text-xs text-[var(--muted-light)] uppercase tracking-wider">{label}</p>
+      <p className="text-[#1a1a1a] font-medium mt-0.5">{value}</p>
     </div>
   );
 }

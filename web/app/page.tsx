@@ -4,6 +4,7 @@ import BoroughTabs from "@/components/BoroughTabs";
 import CuisineFilter from "@/components/CuisineFilter";
 import NearMeButton from "@/components/NearMeButton";
 import RestaurantSection from "@/components/RestaurantSection";
+import CommunityProgress from "@/components/CommunityProgress";
 
 export const dynamic = "force-dynamic";
 
@@ -59,6 +60,7 @@ export default async function Home({
             nodash<span style={{ color: "var(--accent)" }}>.</span>
           </a>
           <div className="flex items-center gap-4 text-sm" style={{ color: "var(--muted)" }}>
+            <a href="/leaderboard" className="hover:opacity-70 transition-opacity">Leaderboard</a>
             <a href="/feedback" className="hover:opacity-70 transition-opacity">Feedback</a>
             <a href="/about" className="hover:opacity-70 transition-opacity">About</a>
           </div>
@@ -79,6 +81,9 @@ export default async function Home({
           </div>
         </section>
       )}
+
+      {/* Community Progress */}
+      {!isFiltering && page === 1 && <CommunityProgress />}
 
       {/* Search + Filters */}
       <section className="sticky top-0 z-10 backdrop-blur-sm border-b" style={{ background: "color-mix(in srgb, var(--background) 95%, transparent)", borderColor: "var(--card-border)" }}>
@@ -174,6 +179,8 @@ export default async function Home({
           </p>
           <p className="mt-1">
             <a href="/about" className="hover:opacity-70">About</a>
+            {" · "}
+            <a href="/leaderboard" className="hover:opacity-70">Leaderboard</a>
             {" · "}
             <a href="/feedback" className="hover:opacity-70">Feedback</a>
             {" · "}

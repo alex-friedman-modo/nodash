@@ -25,9 +25,19 @@ export function getSubmissionsDb(): Database.Database {
         comment TEXT,
         submitted_at TEXT DEFAULT (datetime('now')),
         ip_address TEXT,
-        status TEXT DEFAULT 'pending'
+        status TEXT DEFAULT 'pending',
+        contributor_id TEXT,
+        display_name TEXT
       );
     `);
+    // Migrations for existing DBs
+    const migrations = [
+      "ALTER TABLE user_submissions ADD COLUMN contributor_id TEXT",
+      "ALTER TABLE user_submissions ADD COLUMN display_name TEXT",
+    ];
+    for (const sql of migrations) {
+      try { _db.exec(sql); } catch { /* column already exists */ }
+    }
   }
   return _db;
 }
