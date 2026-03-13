@@ -3,6 +3,7 @@ import { formatCuisine, formatOrderingMethod, formatPriceLevel } from "@/lib/for
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { Phone, Globe, MapPin, ArrowLeft, ExternalLink, Clock } from "lucide-react";
+import DeliveryInfoForm from "@/components/DeliveryInfoForm";
 
 const BOROUGH_TO_SLUG: Record<string, string> = {
   Manhattan: "manhattan",
@@ -176,6 +177,12 @@ export default async function RestaurantPage({
             </p>
           </div>
         )}
+
+        {/* Crowdsource Delivery Info */}
+        <DeliveryInfoForm
+          placeId={r.place_id}
+          hasDeliveryInfo={!!(r.delivery_fee || r.delivery_minimum)}
+        />
 
         {/* Feedback */}
         <div className="mt-8 text-center">
