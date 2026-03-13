@@ -47,7 +47,7 @@ export default function RestaurantSection({
       <div className="flex items-center justify-end mb-3">
         <div className="flex items-center gap-3">
           {isFiltering && (
-            <a href="/" className="text-xs text-green-400 hover:underline">
+            <a href="/" className="text-xs text-[var(--accent)] hover:underline">
               Clear filters
             </a>
           )}

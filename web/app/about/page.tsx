@@ -9,19 +9,19 @@ export const metadata = {
 
 export default function AboutPage() {
   return (
-    <main className="min-h-screen bg-zinc-950 text-white">
+    <main className="min-h-screen bg-[var(--background)] text-[#1a1a1a]">
       <div className="max-w-2xl mx-auto px-4 py-8">
         <Link
           href="/"
-          className="inline-flex items-center gap-1 text-sm text-zinc-500 hover:text-zinc-300 mb-8"
+          className="inline-flex items-center gap-1 text-sm text-[var(--muted)] hover:text-[#1a1a1a] mb-8"
         >
           <ArrowLeft className="w-4 h-4" /> Back to directory
         </Link>
 
         <h1 className="text-3xl md:text-4xl font-bold mb-8">About nodash</h1>
 
-        <div className="prose prose-invert prose-zinc max-w-none space-y-6 text-zinc-300 leading-relaxed">
-          <p className="text-lg text-white font-medium">
+        <div className="prose max-w-none space-y-6 text-[#1a1a1a] leading-relaxed">
+          <p className="text-lg font-medium">
             Here&apos;s a number that should piss you off: 30%.
           </p>
 
@@ -53,7 +53,7 @@ export default function AboutPage() {
             listed it.
           </p>
 
-          <p className="text-white font-medium">
+          <p className="font-medium">
             Three thousand and sixty-seven restaurants later, here we are.
           </p>
 
@@ -80,27 +80,27 @@ export default function AboutPage() {
             that&apos;s never turned a profit.
           </p>
 
-          <p className="text-lg text-green-400 font-semibold">
+          <p className="text-lg text-[var(--accent)] font-semibold">
             Order direct. Skip the cut. It&apos;s not complicated.
           </p>
         </div>
 
-        <div className="mt-12 pt-8 border-t border-zinc-800">
+        <div className="mt-12 pt-8 border-t border-[var(--card-border)]">
           <h2 className="font-semibold text-lg mb-4">Get in touch</h2>
-          <p className="text-zinc-400 text-sm mb-4">
+          <p className="text-[var(--muted)] text-sm mb-4">
             Run a restaurant that delivers direct?{" "}
             <a
               href="mailto:afriedman1997@gmail.com?subject=List my restaurant on nodash"
-              className="text-green-400 hover:underline"
+              className="text-[var(--accent)] hover:underline"
             >
               Get listed for free.
             </a>
           </p>
-          <p className="text-zinc-400 text-sm">
+          <p className="text-[var(--muted)] text-sm">
             See something wrong?{" "}
             <a
               href="mailto:afriedman1997@gmail.com?subject=nodash correction"
-              className="text-green-400 hover:underline"
+              className="text-[var(--accent)] hover:underline"
             >
               Let us know.
             </a>

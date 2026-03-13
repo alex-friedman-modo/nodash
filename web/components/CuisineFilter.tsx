@@ -27,7 +27,7 @@ export default function CuisineFilter({
     <select
       value={activeCuisine}
       onChange={handleChange}
-      className="bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-green-500/50 appearance-none cursor-pointer"
+      className="bg-[var(--card-bg)] border border-[var(--card-border)] rounded-lg px-3 py-2 text-sm text-[#1a1a1a] focus:outline-none focus:border-[var(--accent)] appearance-none cursor-pointer"
     >
       <option value="">All Cuisines</option>
       {cuisines.map((c) => (

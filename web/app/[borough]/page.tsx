@@ -117,16 +117,16 @@ export default async function BoroughPage({
   }
 
   return (
-    <main className="min-h-screen bg-zinc-950 text-white">
+    <main className="min-h-screen bg-[var(--background)] text-[#1a1a1a]">
       {/* Nav */}
       <nav className="px-4 py-3">
         <div className="max-w-5xl mx-auto flex items-center justify-between">
           <a href="/" className="font-bold text-xl tracking-tight">
-            nodash<span className="text-green-400">.</span>
+            nodash<span className="text-[var(--accent)]">.</span>
           </a>
           <div className="flex items-center gap-4 text-sm">
-            <a href="/feedback" className="text-zinc-500 hover:text-white transition-colors">Feedback</a>
-            <a href="/about" className="text-zinc-500 hover:text-white transition-colors">About</a>
+            <a href="/feedback" className="text-[var(--muted)] hover:text-[#1a1a1a] transition-colors">Feedback</a>
+            <a href="/about" className="text-[var(--muted)] hover:text-[#1a1a1a] transition-colors">About</a>
           </div>
         </div>
       </nav>
@@ -134,23 +134,23 @@ export default async function BoroughPage({
       {/* Hero */}
       <section className="px-4 pb-4">
         <div className="max-w-5xl mx-auto">
-          <div className="flex items-center gap-2 text-sm text-zinc-500 mb-2">
-            <Link href="/" className="hover:text-zinc-300">Home</Link>
+          <div className="flex items-center gap-2 text-sm text-[var(--muted)] mb-2">
+            <Link href="/" className="hover:text-[#1a1a1a]">Home</Link>
             <span>/</span>
-            <span className="text-zinc-300">{boroughName}</span>
+            <span className="text-[#1a1a1a]">{boroughName}</span>
           </div>
           <h1 className="text-2xl md:text-4xl font-bold tracking-tight leading-snug">
             {boroughName} Restaurants That Deliver Direct
-            <span className="text-green-400">.</span>
+            <span className="text-[var(--accent)]">.</span>
           </h1>
-          <p className="mt-2 text-sm md:text-base text-zinc-400">
+          <p className="mt-2 text-sm md:text-base text-[var(--muted)]">
             {total.toLocaleString()} restaurant{total !== 1 ? "s" : ""} in {boroughName} with direct delivery — no apps, no fees, no middleman.
           </p>
         </div>
       </section>
 
       {/* Search */}
-      <section className="sticky top-0 z-10 bg-zinc-950/95 backdrop-blur-sm border-b border-zinc-800/50">
+      <section className="sticky top-0 z-10 bg-[var(--background)]/95 backdrop-blur-sm border-b border-[var(--card-border)]">
         <div className="max-w-5xl mx-auto px-4 py-2.5">
           <SearchBar initialSearch={search} basePath={`/${slug}`} />
         </div>
@@ -159,7 +159,7 @@ export default async function BoroughPage({
       {/* Top Cuisines */}
       {topCuisines.length > 0 && !isFiltering && (
         <section className="max-w-5xl mx-auto px-4 py-4">
-          <h2 className="text-sm font-semibold text-zinc-400 uppercase tracking-wider mb-3">
+          <h2 className="text-sm font-semibold text-[var(--muted)] uppercase tracking-wider mb-3">
             Popular in {boroughName}
           </h2>
           <div className="flex flex-wrap gap-2">
@@ -169,10 +169,10 @@ export default async function BoroughPage({
                 <Link
                   key={c.cuisine}
                   href={cuisineSlug ? `/cuisine/${cuisineSlug}` : `/${slug}?cuisine=${encodeURIComponent(c.cuisine)}`}
-                  className="inline-flex items-center gap-1.5 bg-zinc-900 border border-zinc-800 rounded-full px-3 py-1.5 text-sm hover:border-green-500/50 hover:text-green-400 transition-colors"
+                  className="inline-flex items-center gap-1.5 bg-[var(--card-bg)] border border-[var(--card-border)] rounded-full px-3 py-1.5 text-sm hover:border-[var(--accent)]/50 hover:text-[var(--accent)] transition-colors"
                 >
                   {c.cuisine}
-                  <span className="text-zinc-600 text-xs">{c.count}</span>
+                  <span className="text-[var(--muted-light)] text-xs">{c.count}</span>
                 </Link>
               );
             })}
@@ -182,13 +182,13 @@ export default async function BoroughPage({
 
       {/* Results count */}
       <div className="max-w-5xl mx-auto px-4 py-2 flex items-center justify-between">
-        <p className="text-xs text-zinc-500">
+        <p className="text-xs text-[var(--muted)]">
           {total.toLocaleString()} result{total !== 1 ? "s" : ""}
           {cuisine ? ` · ${cuisine}` : ""}
           {search ? ` · "${search}"` : ""}
         </p>
         {isFiltering && (
-          <a href={`/${slug}`} className="text-xs text-green-400 hover:underline">Clear filters</a>
+          <a href={`/${slug}`} className="text-xs text-[var(--accent)] hover:underline">Clear filters</a>
         )}
       </div>
 
@@ -202,10 +202,10 @@ export default async function BoroughPage({
 
         {restaurants.length === 0 && (
           <div className="text-center py-16">
-            <p className="text-xl text-zinc-400">No restaurants found</p>
-            <p className="text-sm text-zinc-500 mt-2">
+            <p className="text-xl text-[var(--muted)]">No restaurants found</p>
+            <p className="text-sm text-[var(--muted)] mt-2">
               Try a different search or{" "}
-              <a href={`/${slug}`} className="text-green-400 hover:underline">
+              <a href={`/${slug}`} className="text-[var(--accent)] hover:underline">
                 clear filters
               </a>
             </p>
@@ -218,18 +218,18 @@ export default async function BoroughPage({
             {page > 1 && (
               <a
                 href={paginationUrl(page - 1)}
-                className="px-4 py-2 bg-zinc-800 rounded-lg hover:bg-zinc-700 text-sm transition-colors"
+                className="px-4 py-2 bg-[var(--card-bg)] border border-[var(--card-border)] rounded-lg hover:bg-[var(--card-border)] text-sm transition-colors"
               >
                 ← Previous
               </a>
             )}
-            <span className="px-4 py-2 text-sm text-zinc-500">
+            <span className="px-4 py-2 text-sm text-[var(--muted)]">
               {page} / {totalPages}
             </span>
             {page < totalPages && (
               <a
                 href={paginationUrl(page + 1)}
-                className="px-4 py-2 bg-zinc-800 rounded-lg hover:bg-zinc-700 text-sm transition-colors"
+                className="px-4 py-2 bg-[var(--card-bg)] border border-[var(--card-border)] rounded-lg hover:bg-[var(--card-border)] text-sm transition-colors"
               >
                 Next →
               </a>
@@ -239,9 +239,9 @@ export default async function BoroughPage({
       </section>
 
       {/* Other Boroughs */}
-      <section className="border-t border-zinc-800/50">
+      <section className="border-t border-[var(--card-border)]">
         <div className="max-w-5xl mx-auto px-4 py-8">
-          <h2 className="text-sm font-semibold text-zinc-400 uppercase tracking-wider mb-3">
+          <h2 className="text-sm font-semibold text-[var(--muted)] uppercase tracking-wider mb-3">
             Other Boroughs
           </h2>
           <div className="flex flex-wrap gap-2">
@@ -251,7 +251,7 @@ export default async function BoroughPage({
                 <Link
                   key={s}
                   href={`/${s}`}
-                  className="bg-zinc-900 border border-zinc-800 rounded-lg px-4 py-2 text-sm hover:border-green-500/50 hover:text-green-400 transition-colors"
+                  className="bg-[var(--card-bg)] border border-[var(--card-border)] rounded-lg px-4 py-2 text-sm hover:border-[var(--accent)]/50 hover:text-[var(--accent)] transition-colors"
                 >
                   {name}
                 </Link>
@@ -261,18 +261,18 @@ export default async function BoroughPage({
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-zinc-800/50 py-4">
-        <div className="max-w-5xl mx-auto px-4 text-center text-zinc-600 text-xs">
+      <footer className="border-t border-[var(--card-border)] py-4">
+        <div className="max-w-5xl mx-auto px-4 text-center text-[var(--muted-light)] text-xs">
           <p>
-            <span className="text-zinc-500">nodash</span><span className="text-green-400">.</span>
+            <span className="text-[var(--muted)]">nodash</span><span className="text-[var(--accent)]">.</span>
             {" "}Order direct. Skip the cut.
           </p>
           <p className="mt-1">
-            <a href="/about" className="hover:text-zinc-400">About</a>
+            <a href="/about" className="hover:text-[var(--muted)]">About</a>
             {" · "}
-            <a href="/feedback" className="hover:text-zinc-400">Feedback</a>
+            <a href="/feedback" className="hover:text-[var(--muted)]">Feedback</a>
             {" · "}
-            <a href="mailto:afriedman1997@gmail.com" className="hover:text-zinc-400">List your restaurant</a>
+            <a href="mailto:afriedman1997@gmail.com" className="hover:text-[var(--muted)]">List your restaurant</a>
           </p>
         </div>
       </footer>

@@ -44,7 +44,7 @@ export default function MapView({ mapPinsUrl }: MapViewProps) {
       attributionControl: false,
     });
 
-    L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
+    L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
       maxZoom: 19,
       subdomains: "abcd",
     }).addTo(map);
@@ -106,8 +106,8 @@ export default function MapView({ mapPinsUrl }: MapViewProps) {
         pins.forEach((pin) => {
           const marker = L.circleMarker([pin.lat, pin.lng], {
             radius: 6,
-            fillColor: "#22c55e",
-            color: "#16a34a",
+            fillColor: "#E85D3A",
+            color: "#d14e2f",
             weight: 1,
             opacity: 0.9,
             fillOpacity: 0.8,
@@ -167,21 +167,21 @@ export default function MapView({ mapPinsUrl }: MapViewProps) {
     <>
       <style jsx global>{`
         .dark-popup .leaflet-popup-content-wrapper {
-          background: #18181b;
-          color: #fff;
-          border: 1px solid #3f3f46;
+          background: #FFFFFF;
+          color: #1a1a1a;
+          border: 1px solid #F0ECE4;
           border-radius: 8px;
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
         }
         .dark-popup .leaflet-popup-tip {
-          background: #18181b;
-          border: 1px solid #3f3f46;
+          background: #FFFFFF;
+          border: 1px solid #F0ECE4;
         }
         .dark-popup .leaflet-popup-close-button {
-          color: #a1a1aa;
+          color: #8C8478;
         }
         .dark-popup .leaflet-popup-close-button:hover {
-          color: #fff;
+          color: #1a1a1a;
         }
         .map-popup strong {
           font-size: 14px;
@@ -189,21 +189,21 @@ export default function MapView({ mapPinsUrl }: MapViewProps) {
           margin-bottom: 2px;
         }
         .map-popup-name {
-          color: #fff;
+          color: #1a1a1a;
           text-decoration: none;
         }
         .map-popup-name:hover {
-          color: #22c55e;
+          color: #E85D3A;
           text-decoration: underline;
         }
         .map-popup-meta {
           font-size: 12px;
-          color: #a1a1aa;
+          color: #8C8478;
           margin-bottom: 2px;
         }
         .map-popup-addr {
           font-size: 11px;
-          color: #71717a;
+          color: #C4BDB2;
           margin-bottom: 6px;
         }
         .map-popup-btn {
@@ -219,18 +219,18 @@ export default function MapView({ mapPinsUrl }: MapViewProps) {
           opacity: 0.85;
         }
         .map-popup-btn.order {
-          background: #22c55e;
-          color: #000;
+          background: #E85D3A;
+          color: #fff;
         }
         .map-popup-btn.call {
-          background: #3f3f46;
-          color: #fff;
+          background: #F0ECE4;
+          color: #1a1a1a;
         }
         .marker-cluster-small div,
         .marker-cluster-medium div,
         .marker-cluster-large div {
-          background: #22c55e;
-          color: #000;
+          background: #E85D3A;
+          color: #fff;
           border-radius: 50%;
           width: 100%;
           height: 100%;
@@ -241,15 +241,15 @@ export default function MapView({ mapPinsUrl }: MapViewProps) {
           font-size: 13px;
         }
         .marker-cluster-small {
-          background: rgba(34, 197, 94, 0.3);
+          background: rgba(232, 93, 58, 0.3);
           border-radius: 50%;
         }
         .marker-cluster-medium {
-          background: rgba(34, 197, 94, 0.35);
+          background: rgba(232, 93, 58, 0.35);
           border-radius: 50%;
         }
         .marker-cluster-large {
-          background: rgba(34, 197, 94, 0.4);
+          background: rgba(232, 93, 58, 0.4);
           border-radius: 50%;
         }
         .marker-cluster {
@@ -258,8 +258,8 @@ export default function MapView({ mapPinsUrl }: MapViewProps) {
       `}</style>
       <div className="relative">
         {loading && (
-          <div className="absolute inset-0 z-[1000] flex items-center justify-center bg-zinc-900/70 rounded-lg">
-            <div className="flex items-center gap-2 text-zinc-400">
+          <div className="absolute inset-0 z-[1000] flex items-center justify-center bg-[var(--background)]/70 rounded-lg">
+            <div className="flex items-center gap-2 text-[var(--muted)]">
               <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
@@ -269,13 +269,13 @@ export default function MapView({ mapPinsUrl }: MapViewProps) {
           </div>
         )}
         {!loading && pinCount > 0 && (
-          <div className="absolute top-2 right-2 z-[1000] bg-zinc-900/80 text-zinc-400 text-xs px-2 py-1 rounded">
+          <div className="absolute top-2 right-2 z-[1000] bg-[var(--background)]/80 text-[var(--muted)] text-xs px-2 py-1 rounded">
             {pinCount.toLocaleString()} restaurants
           </div>
         )}
         <div
           ref={containerRef}
-          className="w-full h-[60vh] md:h-[500px] rounded-lg border border-zinc-800 overflow-hidden"
+          className="w-full h-[60vh] md:h-[500px] rounded-lg border border-[var(--card-border)] overflow-hidden"
         />
       </div>
     </>
