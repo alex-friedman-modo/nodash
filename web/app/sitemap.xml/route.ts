@@ -7,7 +7,7 @@ const BOROUGH_SLUGS = ["manhattan", "brooklyn", "queens", "bronx", "staten-islan
 const CUISINE_SLUGS = ["pizza", "chinese", "mexican", "japanese", "thai", "indian", "italian", "american", "halal", "deli"];
 
 export async function GET() {
-  const baseUrl = "https://nodash.nyc";
+  const baseUrl = "https://nodash.co";
 
   // Static pages
   const staticUrls = [

@@ -32,5 +32,5 @@
   <!-- Bottom bar -->
   <rect x="0" y="580" width="1200" height="50" fill="#FFF0EB"/>
   <text x="80" y="612" font-family="system-ui, -apple-system, Helvetica, Arial, sans-serif" font-size="20" fill="#8C8478">Order direct. Skip the cut.</text>
-  <text x="1120" y="612" text-anchor="end" font-family="system-ui, -apple-system, Helvetica, Arial, sans-serif" font-size="20" font-weight="600" fill="#E85D3A">nodash.nyc</text>
+  <text x="1120" y="612" text-anchor="end" font-family="system-ui, -apple-system, Helvetica, Arial, sans-serif" font-size="20" font-weight="600" fill="#E85D3A">nodash.co</text>
 </svg>

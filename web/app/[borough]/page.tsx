@@ -57,7 +57,7 @@ export async function generateMetadata({
     openGraph: {
       title: `${name} Restaurants That Deliver Direct | nodash`,
       description: `Skip the apps. Find ${name} restaurants with direct delivery — your money goes straight to the restaurant.`,
-      url: `https://nodash.nyc/${slug}`,
+      url: `https://nodash.co/${slug}`,
     },
   };
 }

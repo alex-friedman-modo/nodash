@@ -8,6 +8,6 @@ export default function robots(): MetadataRoute.Robots {
         allow: "/",
       },
     ],
-    sitemap: "https://nodash.nyc/sitemap.xml",
+    sitemap: "https://nodash.co/sitemap.xml",
   };
 }

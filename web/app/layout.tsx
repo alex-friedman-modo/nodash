@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://nodash.co"),
   title: "nodash — NYC Restaurants That Deliver Direct | No Apps, No 30% Cut",
   description:
     "Find NYC restaurants that deliver without DoorDash, Uber Eats, or Grubhub. 3,000+ restaurants across all 5 boroughs. See delivery fees, minimums, and how to order direct. Free to use.",
