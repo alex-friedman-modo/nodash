@@ -16,8 +16,8 @@
 ## 📋 TODO — Engineering
 
 ### Launch Blockers
-- [ ] Mobile test pass on REAL device — tap-to-call, photo loading, map interaction
-  - Playwright E2E: 32/34 passing (iPhone 14 viewport), all core flows work
+- [x] ~~Mobile test pass~~ — tap-to-call ✅, photos ✅, map ✅ (tested by Alex 2026-03-14)
+  - Map needs improvements but shelved for now
 
 ### Post-Launch
 - [ ] Structured data (JSON-LD for local business listings)
