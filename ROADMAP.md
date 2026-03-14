@@ -44,6 +44,12 @@
 - [x] Community progress component on homepage
 - [ ] Admin review flow for submitted data (approve/reject/merge into main DB)
 
+### Menu Links
+- [x] Rename "Order Online" → "Menu & Order" (platform URLs show menus anyway)
+- [x] "View Menu" button on detail pages for 78 restaurants with delivery_menu URLs
+- [ ] Google Places `menuUri` re-query for more menu links (~$9 API cost)
+- [ ] Scrape `/menu` paths from restaurant websites (raw_text_preview)
+
 ### Future
 - [ ] Supabase migration (schema + script ready in `supabase/` and `pipeline/`)
 - [ ] Restaurant claim flow — let owners update their listing
