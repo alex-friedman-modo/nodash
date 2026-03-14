@@ -82,6 +82,18 @@ export default function RestaurantCard({ r }: { r: Restaurant }) {
                 <ExternalLink className="w-3 h-3" />
                 Menu & Order
               </a>
+            ) : r.website ? (
+              <a
+                href={r.delivery_menu || r.website}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                className="inline-flex items-center gap-1 text-xs font-medium rounded-lg px-3 py-1.5 transition-opacity hover:opacity-90"
+                style={{ background: "var(--accent-light)", color: "var(--accent)" }}
+              >
+                <ExternalLink className="w-3 h-3" />
+                View Menu
+              </a>
             ) : (
               <span className="text-xs px-2 py-1 rounded-lg" style={{ background: "var(--accent-light)", color: "var(--muted)" }}>
                 {method}
