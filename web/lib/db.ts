@@ -109,7 +109,7 @@ export function getRestaurants(filters: RestaurantFilters = {}): {
               price_level, primary_type, direct_delivery, delivery_fee, delivery_minimum,
               delivery_radius, delivery_hours, ordering_method, online_order_url,
               detected_platform, scrape_status, llm_confidence, serves_vegetarian,
-              generative_summary, editorial_summary, photo_url
+              generative_summary, editorial_summary, photo_url, delivery_menu, cuisine_label
        FROM restaurants ${where}
        ${orderClause}
        LIMIT ? OFFSET ?`
@@ -129,7 +129,7 @@ export function getRestaurant(placeId: string): Restaurant | null {
                 price_level, primary_type, direct_delivery, delivery_fee, delivery_minimum,
                 delivery_radius, delivery_hours, ordering_method, online_order_url,
                 detected_platform, scrape_status, llm_confidence, serves_vegetarian,
-                generative_summary, editorial_summary, photo_url
+                generative_summary, editorial_summary, photo_url, delivery_menu, cuisine_label
          FROM restaurants WHERE place_id = ?`
       )
       .get(placeId) as Restaurant) || null

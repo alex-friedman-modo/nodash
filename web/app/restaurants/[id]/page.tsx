@@ -190,7 +190,17 @@ export default async function RestaurantPage({
               className="flex items-center justify-center gap-2 bg-white border border-[var(--card-border)] text-[#1a1a1a] hover:bg-[var(--accent-light)] rounded-lg px-6 py-3 transition-colors"
             >
               <ExternalLink className="w-5 h-5" />
-              Order Online
+              Menu & Order
+            </a>
+          )}
+          {r.delivery_menu && (
+            <a
+              href={r.delivery_menu}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-center gap-2 bg-white border border-[var(--card-border)] text-[#1a1a1a] hover:bg-[var(--accent-light)] rounded-lg px-6 py-3 transition-colors"
+            >
+              📋 View Menu
             </a>
           )}
           {r.website && !r.online_order_url && (

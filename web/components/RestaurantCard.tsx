@@ -80,7 +80,7 @@ export default function RestaurantCard({ r }: { r: Restaurant }) {
                 style={{ background: "var(--accent)" }}
               >
                 <ExternalLink className="w-3 h-3" />
-                Order Online
+                Menu & Order
               </a>
             ) : (
               <span className="text-xs px-2 py-1 rounded-lg" style={{ background: "var(--accent-light)", color: "var(--muted)" }}>

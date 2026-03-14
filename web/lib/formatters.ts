@@ -74,4 +74,6 @@ export interface Restaurant {
   generative_summary: string | null;
   editorial_summary: string | null;
   photo_url: string | null;
+  delivery_menu: string | null;
+  cuisine_label: string | null;
 }
