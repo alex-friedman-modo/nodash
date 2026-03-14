@@ -107,6 +107,26 @@ export default async function BoroughPage({
   const totalPages = Math.ceil(total / limit);
   const isFiltering = !!search || !!cuisine;
 
+  const itemListJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    name: `${boroughName} Restaurants with Direct Delivery`,
+    description: `${boroughName} restaurants that deliver without delivery apps — no DoorDash, no Uber Eats.`,
+    numberOfItems: total,
+    itemListElement: restaurants.map((r, index) => ({
+      "@type": "ListItem",
+      position: offset + index + 1,
+      item: {
+        "@type": "Restaurant",
+        name: r.name,
+        url: `https://nodash.co/restaurants/${encodeURIComponent(r.place_id)}`,
+        ...(r.address ? { address: r.address } : {}),
+        ...(r.primary_type ? { servesCuisine: r.primary_type } : {}),
+        ...(r.rating ? { aggregateRating: { "@type": "AggregateRating", ratingValue: String(r.rating) } } : {}),
+      },
+    })),
+  };
+
   function paginationUrl(p: number) {
     const params = new URLSearchParams();
     if (search) params.set("search", search);
@@ -118,6 +138,10 @@ export default async function BoroughPage({
 
   return (
     <main className="min-h-screen bg-[var(--background)] text-[#1a1a1a]">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListJsonLd) }}
+      />
       {/* Nav */}
       <nav className="px-4 py-3">
         <div className="max-w-5xl mx-auto flex items-center justify-between">

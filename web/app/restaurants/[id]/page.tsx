@@ -31,8 +31,64 @@ export default async function RestaurantPage({
     r.address
   )}`;
 
+  // Build JSON-LD structured data
+  const jsonLd: Record<string, unknown> = {
+    "@context": "https://schema.org",
+    "@type": "Restaurant",
+    name: r.name,
+    url: `https://nodash.co/restaurants/${encodeURIComponent(id)}`,
+  };
+
+  if (r.address) {
+    jsonLd.address = {
+      "@type": "PostalAddress",
+      streetAddress: r.address,
+      ...(r.borough ? { addressLocality: r.borough } : {}),
+      addressRegion: "NY",
+      ...(r.zip_code ? { postalCode: r.zip_code } : {}),
+      addressCountry: "US",
+    };
+  }
+
+  if (r.lat && r.lng) {
+    jsonLd.geo = {
+      "@type": "GeoCoordinates",
+      latitude: r.lat,
+      longitude: r.lng,
+    };
+  }
+
+  if (r.phone) jsonLd.telephone = r.phone;
+  if (r.photo_url) jsonLd.image = r.photo_url;
+  if (cuisine) jsonLd.servesCuisine = cuisine; // cuisine = formatCuisine(r.primary_type)
+
+  if (r.rating) {
+    jsonLd.aggregateRating = {
+      "@type": "AggregateRating",
+      ratingValue: String(r.rating),
+      ...(r.review_count ? { reviewCount: String(r.review_count) } : {}),
+    };
+  }
+
+  if (r.online_order_url) {
+    jsonLd.potentialAction = {
+      "@type": "OrderAction",
+      target: r.online_order_url,
+    };
+    jsonLd.offers = {
+      "@type": "Offer",
+      availableDeliveryMethod:
+        "http://purl.org/goodrelations/v1#DeliveryModeDirectDownload",
+      description: "Direct delivery available",
+    };
+  }
+
   return (
     <main className="min-h-screen bg-[var(--background)] text-[#1a1a1a]">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <div className="max-w-3xl mx-auto px-4 py-8">
         {/* Breadcrumb */}
         <div className="flex items-center gap-2 text-sm text-[var(--muted-light)] mb-8">

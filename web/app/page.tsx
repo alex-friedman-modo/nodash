@@ -54,8 +54,26 @@ export default async function Home({
   const isFiltering = search || borough !== "All" || cuisine || lat || freeDelivery;
   const totalPages = Math.ceil(total / limit);
 
+  const websiteJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    name: "nodash",
+    url: "https://nodash.co",
+    description:
+      "3,000+ NYC restaurants that deliver without delivery apps",
+    potentialAction: {
+      "@type": "SearchAction",
+      target: "https://nodash.co/?search={search_term_string}",
+      "query-input": "required name=search_term_string",
+    },
+  };
+
   return (
     <main className="min-h-screen" style={{ background: "var(--background)", color: "var(--foreground)" }}>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteJsonLd) }}
+      />
       {/* Nav */}
       <nav className="px-4 py-3 border-b" style={{ borderColor: "var(--card-border)" }}>
         <div className="max-w-5xl mx-auto flex items-center justify-between">

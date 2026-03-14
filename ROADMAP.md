@@ -22,7 +22,7 @@
 ### Post-Launch
 - [ ] Structured data (JSON-LD for local business listings)
 - [ ] Search improvements: debounced live search, fuzzy matching
-- [ ] Filter by delivery fee (free / under $5 / any)
+- [x] ~~Filter by delivery fee~~ — **Free Delivery toggle** shipped (`e88f204`), 298 restaurants
 - [ ] Blog content for SEO ("How much does DoorDash charge restaurants?")
 - [ ] Light/dark mode toggle (currently light only)
 
@@ -153,4 +153,4 @@
 
 ---
 
-*Last updated: 2026-03-13 13:08 UTC*
+*Last updated: 2026-03-13 19:07 UTC*
