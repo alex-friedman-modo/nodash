@@ -34,7 +34,7 @@
 - [ ] Playwright deep scrape on "website" restaurants (749 gap) — render JS ordering pages
 - [ ] Bland.ai phone verification for ~500 phone-only restaurants (~$35-50)
 - [ ] 881 `extracted_llm_uncertain` restaurants — show with "unverified" badge or hide?
-- [ ] Re-scrape `http_404` restaurants with bare domain (strip UTM/paths)
+- [x] ~~Re-scrape failed fetches~~ — 66 new restaurants found (3,067 → 3,133)
 
 ### Crowdsource (NEW — built 2026-03-13)
 - [x] Crowdsource delivery details form — step-by-step flow on restaurant detail pages
@@ -122,12 +122,12 @@
 ## 📊 KEY METRICS
 
 - **Total restaurants in DB:** 7,060
-- **Confirmed direct delivery:** 3,067 (43%)
-- **With online order URL:** 1,523 (after Slice URL fix — was 1,054)
+- **Confirmed direct delivery:** 3,133 (44%)
+- **With online order URL:** 1,639 (after Slice URL fix + re-scraping)
 - **With photos:** 3,062
-- **DB version:** v0.1.5 (Slice URLs fixed + minimums)
-- **Delivery fee coverage:** 652/3,067 (21%) — 146 confirmed free
-- **Delivery minimum coverage:** 787/3,067 (25%) — was 6% on 3/12!
+- **DB version:** v0.1.6 (re-scraped failed sites + all data improvements)
+- **Delivery fee coverage:** 652/3,133 (20%) — 146 confirmed free
+- **Delivery minimum coverage:** 787/3,133 (25%) — was 6% on 3/12!
 - **Delivery radius coverage:** 542/3,067 (17%)
 - **Platform breakdown:** Slice 580 (569 with URLs), Toast 398, Sauce 161, ChowNow 159, Menufy 105
 - **Domain:** nodash.co (live on Railway)
