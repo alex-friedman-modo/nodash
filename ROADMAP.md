@@ -10,8 +10,8 @@
 - [x] ~~Railway: add custom domain~~ — **nodash.co is LIVE** ✅
 - [ ] Approve Twitter launch thread before posting (Alex's account)
 - [ ] Approve Reddit posts before posting (Alex's identity)
-- [ ] Add `www.nodash.co` as second custom domain in Railway dashboard
-- [ ] Generate new Railway API token (old one expired)
+- [x] ~~Add `www.nodash.co`~~ — Alex added, HTTP 200 ✅
+- [x] ~~New Railway API token~~ — working ✅
 
 ## 📋 TODO — Engineering
 
@@ -20,7 +20,7 @@
   - Map needs improvements but shelved for now
 
 ### Post-Launch
-- [ ] Structured data (JSON-LD for local business listings)
+- [x] ~~Structured data (JSON-LD)~~ — Restaurant schema on detail pages, WebSite on homepage, ItemList on borough pages
 - [ ] Search improvements: debounced live search, fuzzy matching
 - [x] ~~Filter by delivery fee~~ — **Free Delivery toggle** shipped (`e88f204`), 298 restaurants
 - [ ] Blog content for SEO ("How much does DoorDash charge restaurants?")
@@ -42,7 +42,7 @@
 - [x] `/api/submissions`, `/api/leaderboard`, `/api/progress` endpoints
 - [x] Contributor tracking (localStorage UUID + optional display name)
 - [x] Community progress component on homepage
-- [ ] Admin review flow for submitted data (approve/reject/merge into main DB)
+- [x] ~~Admin review flow~~ — `/admin` page with auth, merge/reject submissions into main DB
 
 ### Menu Links
 - [x] Rename "Order Online" → "Menu & Order" (platform URLs show menus anyway)
